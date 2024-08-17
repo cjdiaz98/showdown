@@ -172,15 +172,18 @@ async def start_battle(ps_websocket_client, pokemon_battle_type):
         battle = await start_standard_battle(ps_websocket_client, pokemon_battle_type)
 
     await ps_websocket_client.send_message(battle.battle_tag, ["hf"])
-    await ps_websocket_client.send_message(battle.battle_tag, ['/timer on'])
+    # await ps_websocket_client.send_message(battle.battle_tag, ['/timer on'])
 
     return battle
 
 
 async def pokemon_battle(ps_websocket_client, pokemon_battle_type):
     battle = await start_battle(ps_websocket_client, pokemon_battle_type)
+    f = open("logMessages.txt", "w")
+
     while True:
         msg = await ps_websocket_client.receive_message()
+        f.write(msg)
         if battle_is_finished(battle.battle_tag, msg):
             if constants.WIN_STRING in msg:
                 winner = msg.split(constants.WIN_STRING)[-1].split('\n')[0].strip()
@@ -189,6 +192,7 @@ async def pokemon_battle(ps_websocket_client, pokemon_battle_type):
             logger.debug("Winner: {}".format(winner))
             await ps_websocket_client.send_message(battle.battle_tag, ["gg"])
             await ps_websocket_client.leave_battle(battle.battle_tag, save_replay=ShowdownConfig.save_replay)
+            f.close()
             return winner
         else:
             action_required = await async_update_battle(battle, msg)

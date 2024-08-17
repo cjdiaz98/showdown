@@ -15,7 +15,7 @@ from showdown.websocket_client import PSWebsocketClient
 from data import all_move_json
 from data import pokedex
 from data.mods.apply_mods import apply_mods
-
+import debugpy
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +97,13 @@ async def showdown():
         if battles_run >= ShowdownConfig.run_count:
             break
 
+# Enable the debugger to listen on port 5678
+debugpy.listen(("0.0.0.0", 5678))
+print("Waiting for debugger to attach...")
+
+# Wait for VS Code to connect before continuing
+debugpy.wait_for_client()
+print("Debugger attached, continuing program execution...")
 
 if __name__ == "__main__":
     try:

@@ -1,0 +1,245 @@
+[
+	{
+		"Summary": "yveltal started out with 80/100 hp and no status condition. palkia with 20/100 and no status. palkia used Thunder wave on yveltal. yveltal Used oblivion wing on palkia. yveltal ended up with 99/100 hp and paralysis. palkia fainted.",
+	"initial_state": {
+	  "yveltal": {
+		"hp": "80/100",
+		"status": "none"
+	  },
+	  "palkia": {
+		"hp": "20/100",
+		"status": "none"
+	  }
+	},
+	"battle_log": [
+	  {
+		"event": "move",
+		"actor": "p1a",
+		"pokemon": "Palkia",
+		"action": "used",
+		"move": "Thunder Wave",
+		"target": {
+		  "pokemon": "Yveltal",
+		  "side": "p2a"
+		},
+		"result": "hit"
+	  },
+	  {
+		"event": "status",
+		"target": {
+		  "pokemon": "Yveltal",
+		  "side": "p2a"
+		},
+		"status": "paralyzed"
+	  },
+	  {
+		"event": "move",
+		"actor": "p2a",
+		"pokemon": "Yveltal",
+		"action": "used",
+		"move": "Oblivion Wing",
+		"target": {
+		  "pokemon": "Palkia",
+		  "side": "p1a"
+		},
+		"result": "hit"
+	  },
+	  {
+		"event": "damage",
+		"target": {
+		  "pokemon": "Palkia",
+		  "side": "p1a"
+		},
+		"status": "fainted"
+	  },
+	  {
+		"event": "heal",
+		"actor": "p2a",
+		"pokemon": "Yveltal",
+		"hp_after_heal": "99/100",
+		"status": "paralyzed",
+		"source": {
+		  "type": "drain",
+		  "from": "Oblivion Wing",
+		  "target": "Palkia"
+		}
+	  }
+	],
+	"final_state": {
+	  "yveltal": {
+		"hp": "99/100",
+		"status": "paralyzed"
+	  },
+	  "palkia": {
+		"hp": "0/100",
+		"status": "fainted"
+	  }
+	}
+},
+{
+	"Summary": "Charizard and blastoise are on the field both with full HP. Charizard switches out into Venusaur And blastoise uses hydro pump Which hits. blastoise Ends up with full HP and Venusaur has 90/100 hp",
+	"initial_state": {
+	  "charizard": {
+		"hp": "100/100",
+		"status": "none"
+	  },
+	  "blastoise": {
+		"hp": "100/100",
+		"status": "none"
+	  }
+	},
+	"battle_log": [
+	  {
+		"event": "switch",
+		"actor": "p1a",
+		"pokemon_out": {
+		  "pokemon": "Charizard",
+		  "side": "p1a"
+		},
+		"pokemon_in": {
+		  "pokemon": "Venusaur",
+		  "side": "p1a"
+		}
+	  },
+	  {
+		"event": "move",
+		"actor": "p2a",
+		"pokemon": "Blastoise",
+		"action": "used",
+		"move": "Hydro Pump",
+		"target": {
+		  "pokemon": "Venusaur",
+		  "side": "p1a"
+		},
+		"result": "hit"
+	  },
+	  {
+		"event": "damage",
+		"target": {
+		  "pokemon": "Venusaur",
+		  "side": "p1a"
+		},
+		"hp_after_damage": "90/100"
+	  }
+	],
+	"final_state": {
+	  "blastoise": {
+		"hp": "100/100",
+		"status": "none"
+	  },
+	  "venusaur": {
+		"hp": "90/100",
+		"status": "none"
+	  }
+	}
+  },
+  {
+	"Summary": "mewtwo and pikachu are on the field. mewtwo has full health and pikachu has half health. Pikachu uses volt tackle and mewtwo uses nasty plot to double his special attack. mewtwo ends up with 40/100 hp and pikachu 25/100 after taking recoil damage",
+	"initial_state": {
+	  "mewtwo": {
+		"hp": "100/100",
+		"status": "none"
+	  },
+	  "pikachu": {
+		"hp": "50/100",
+		"status": "none"
+	  }
+	},
+	"battle_log": [
+	  {
+		"event": "move",
+		"actor": "p1a",
+		"pokemon": "Pikachu",
+		"action": "used",
+		"move": "Volt Tackle",
+		"target": {
+		  "pokemon": "Mewtwo",
+		  "side": "p2a"
+		},
+		"result": "hit"
+	  },
+	  {
+		"event": "damage",
+		"target": {
+		  "pokemon": "Mewtwo",
+		  "side": "p2a"
+		},
+		"hp_after_damage": "40/100"
+	  },
+	  {
+		"event": "recoil",
+		"actor": "p1a",
+		"pokemon": "Pikachu",
+		"hp_after_recoil": "25/100"
+	  },
+	  {
+		"event": "move",
+		"actor": "p2a",
+		"pokemon": "Mewtwo",
+		"action": "used",
+		"move": "Nasty Plot",
+		"effect": "special_attack_rose",
+		"modifier": 2
+	  }
+	],
+	"final_state": {
+	  "mewtwo": {
+		"hp": "40/100",
+		"status": "none",
+		"boosts": {
+		  "special_attack": 2
+		}
+	  },
+	  "pikachu": {
+		"hp": "25/100",
+		"status": "none"
+	  }
+	}
+  },
+  {
+	"Summary": "Bisharp and Blissey are on the field. Both have half health. Bisharp uses sucker punch on Blissey but fails. Blissey uses soft-boiled and heals to full health",
+	"initial_state": {
+	  "bisharp": {
+		"hp": "50/100",
+		"status": "none"
+	  },
+	  "blissey": {
+		"hp": "50/100",
+		"status": "none"
+	  }
+	},
+	"battle_log": [
+	  {
+		"event": "move",
+		"actor": "p1a",
+		"pokemon": "Bisharp",
+		"action": "used",
+		"move": "Sucker Punch",
+		"target": {
+		  "pokemon": "Blissey",
+		  "side": "p2a"
+		},
+		"result": "failed"
+	  },
+	  {
+		"event": "move",
+		"actor": "p2a",
+		"pokemon": "Blissey",
+		"action": "used",
+		"move": "Soft-Boiled",
+		"effect": "heal",
+		"hp_after_heal": "100/100"
+	  }
+	],
+	"final_state": {
+	  "bisharp": {
+		"hp": "50/100",
+		"status": "none"
+	  },
+	  "blissey": {
+		"hp": "100/100",
+		"status": "none"
+	  }
+	}
+  }	
+]
