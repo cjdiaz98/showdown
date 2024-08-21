@@ -67,6 +67,7 @@ class _ShowdownConfig:
     log_level: str
     log_to_file: bool
     log_handler: Union[CustomRotatingFileHandler, logging.StreamHandler]
+    open_ai_key: str
 
     def configure(self):
         self.battle_bot_module = env("BATTLE_BOT")
@@ -86,6 +87,7 @@ class _ShowdownConfig:
 
         self.log_level = env("LOG_LEVEL", "DEBUG")
         self.log_to_file = env.bool("LOG_TO_FILE", False)
+        self.open_ai_key = env("OPEN_AI_KEY", "")
 
         self.validate_config()
 

@@ -13,6 +13,7 @@ from showdown.engine.evaluate import Scoring
 from showdown.battle import Pokemon
 from showdown.battle import LastUsedMove
 from showdown.battle_modifier import async_update_battle
+from showdown.LLMCommentator import *
 
 from showdown.websocket_client import PSWebsocketClient
 
@@ -184,6 +185,7 @@ async def pokemon_battle(ps_websocket_client, pokemon_battle_type):
     while True:
         msg = await ps_websocket_client.receive_message()
         f.write(msg)
+        turn_dict = parseMessagesIntoEventDicts(msg)
         if battle_is_finished(battle.battle_tag, msg):
             if constants.WIN_STRING in msg:
                 winner = msg.split(constants.WIN_STRING)[-1].split('\n')[0].strip()

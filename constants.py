@@ -471,3 +471,9 @@ BYPASSABLE_ABILITIES = {
 }
 
 CHOICE_ITEMS = {'choicescarf', 'choiceband', 'choicespecs'}
+
+from enum import Enum
+class MoveCategory(Enum):
+    PHYSICAL = "physical"
+    SPECIAL = "special"
+    STATUS = "status"

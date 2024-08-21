@@ -16460,6 +16460,24 @@
         "target": "normal",
         "type": "bug"
     },
+    "u-turn": { 
+        "accuracy": 100,
+        "basePower": 70,
+        "category": "physical",
+        "flags": {
+            "contact": 1,
+            "metronome": 1,
+            "mirror": 1,
+            "protect": 1
+        },
+        "id": "u-turn",
+        "name": "U-turn",
+        "pp": 20,
+        "priority": 0,
+        "secondary": null,
+        "target": "normal",
+        "type": "bug"
+    },    
     "vacuumwave": {
         "accuracy": 100,
         "basePower": 40,
