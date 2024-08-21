@@ -5,15 +5,44 @@ from showdown.battle import Pokemon, LastUsedMove
 import constants
 from data import all_move_json
 import math
+import pprint
+import json 
 
-prompt = ChatPromptTemplate.from_messages([
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+
+class LLMCommentator():
+	promptTemplate = ChatPromptTemplate.from_messages([
 	("system", """You are a world class Pokemon battle commentator and boisterous personality. You are tasked with providing insightful,
 	 witty and lively commentary on a Pokemon battle. You aren't partial to either side. I'll give you information about a turn that just took place in the battle,
 	 and you'll provide commentary on it. You can also provide general commentary on the battle as a whole."""),
-	("user", "{input}")
-])
-# if ShowdownConfig.open_ai_key != "":
-# 	llm = ChatOpenAI(api_key=ShowdownConfig.open_ai_key)
+	 MessagesPlaceholder("chat_history")
+	("human", "{input}")
+	])
+	# previous_round = None
+
+	def __init__(self):
+		ShowdownConfig.configure()
+		if ShowdownConfig.open_ai_key != None:
+			self.llm = ChatOpenAI(
+				model="gpt-4o",
+				temperature=0,
+				max_tokens=None,
+				timeout=None,
+				max_retries=2,
+				api_key=ShowdownConfig.open_ai_key,
+				# base_url="...",
+				# organization="...",
+				# other params...
+			)
+
+	def get_commentary(self, turn_data: dict) -> str:
+		if self.llm is None:
+			return "No OpenAI key provided. Cannot generate commentary."
+		prompt = self.promptTemplate.invoke(turn_data)
+		commentary = self.llm.invoke(prompt)
+		return commentary
 
 BOOST_NAMES = {
 	"atk": "attack",
@@ -34,21 +63,21 @@ def parseMessagesIntoEventDicts(msg: str) -> list[dict]:
 	event_dict = None
 	for i, line in enumerate(msg_lines):
 		split_msg = line.split('|')
-		print(line + "\n")
+		# print(line + "\n")
 		if len(split_msg) < 2:
 			continue
 
 		action = split_msg[1].strip()
 		if action.startswith("-") and event_dict is not None:
 			# this is a subevent. Add it to the main event dict
-			print("subevent " + action)
+			# print("subevent " + action)
 			function_to_call = subevent_parser_lookup.get(action)
 			if function_to_call is not None:
 				function_to_call(line, event_dict)
 			
 		else:
 			# This is a main event
-			print("main event " + action)
+			# print("main event " + action)
 			if event_dict is not None:
 				# append the previous main event to the list of events
 				events.append(event_dict)
@@ -122,7 +151,6 @@ def parseSwitchOrDrag(msg: str) -> dict:
 def parseUseMove(msg: str) -> dict:
 	# |move|p2a: Crobat|Taunt|p1a: Hippowdon
 	# |move|p1a: Tornadus|Heat Wave|p2a: Regice|[miss]
-	print("parseUseMove")
 	split_msg = msg.split('|')[1:]
 	trainer = split_msg[1].split(':')[0].strip()
 	user = split_msg[1].split(':')[1].strip()
@@ -266,7 +294,6 @@ def parseSource(msg: str) -> dict:
 	source_dict = {
 		"factor": parsed_source,
 	}
-	print(msg)
 	if "[of]" in msg:
 		parsed_source_pokemon = msg.split("[of]")[1].split("|")[0].strip()
 		_, pokemon = parseTrainerandPokemon(parsed_source_pokemon)
@@ -368,6 +395,23 @@ def parseWeather(text: str, event_dict: dict) -> dict:
 
     return event_dict
 
+def parseAbility(text: str, event_dict: dict) -> dict:
+    # Split the message by '|'
+    parts = text.split('|')
+    
+    # Extract the trainer and Pokemon part (second part) and ability name (third part)
+    trainer, pokemon = parseTrainerandPokemon(parts[2])
+    ability = parts[3].strip()  # Ability name is the third part
+
+    # Populate the event dictionary with the parsed data
+    event_dict["activate ability"] = {
+		"trainer": trainer,
+        "pokemon": pokemon,
+        "ability": ability
+    }
+
+    return event_dict
+
 main_event_parser_lookup = {
 		'move': parseUseMove,
 		'switch': parseSwitchOrDrag,
@@ -407,7 +451,7 @@ subevent_parser_lookup = {
 		# '-swapsideconditions': swapsideconditions,
 		# '-item': set_item,
 		# '-enditem': remove_item,
-		# '-ability': set_opponent_ability_from_ability_tag,
+		'-ability': parseAbility,
 		# '-formechange': form_change,
 		# '-transform': transform,
 		# '-mega': mega,
@@ -419,7 +463,6 @@ subevent_parser_lookup = {
 }
 
 def parse_turns_from_file(filename):
-	print("parse_turns_from_file")
 	# Initialize variables
 	with open(filename, 'r') as file:
 		content = file.read()
@@ -432,7 +475,7 @@ def parse_turns_from_file(filename):
 
 	# Split content by "|turn|" to get individual turns
 	turns = content.split("|turn|")[1:]  # Skip the first empty part before the first "turn"
-
+	llm_commentator = LLMCommentator()
 	for i in range(len(turns)):
 		turn_data = turns[i]
 		# print(turn_data)
@@ -448,7 +491,9 @@ def parse_turns_from_file(filename):
 		# print(messages + "\n")
 		# Pass the extracted messages to the provided function
 		event_dict = parseMessagesIntoEventDicts(messages)
-
+		json_object = json.dumps(event_dict, indent = 4)
+		commentary = llm_commentator.get_commentary(json_object)
+		pprint.pprint(commentary.content)
 		# Store the result in the dictionary using the turn number as the key
 		parsed_data[turn_number] = event_dict
 

@@ -87,7 +87,7 @@ class _ShowdownConfig:
 
         self.log_level = env("LOG_LEVEL", "DEBUG")
         self.log_to_file = env.bool("LOG_TO_FILE", False)
-        self.open_ai_key = env("OPEN_AI_KEY", "")
+        self.open_ai_key = env("OPEN_AI_KEY", None)
 
         self.validate_config()
 

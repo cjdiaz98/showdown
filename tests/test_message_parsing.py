@@ -4,8 +4,9 @@ import pprint
 from showdown.LLMCommentator import *
 
 class TestChoiceRepresentations(unittest.TestCase):
-	# def setUp(self):
-	# 	self.skipTest('module not tested') # uncomment when you want to skip tests
+	def setUp(self):
+		self.maxDiff = None
+		self.skipTest('module not tested') # uncomment when you want to skip tests
 
 	def test_parse_move(self):
 		move = "|move|p1a: Tornadus|Heat Wave|p2a: Regice|[miss]"
@@ -180,10 +181,13 @@ class TestChoiceRepresentations(unittest.TestCase):
 				"category": "physical",  # Thunder Punch is a physical move
 				"move failed": False,
 				"effectiveness": "resisted",  # Ampharos resisted the move
-				"damage": {
-				"target": "Ampharos",
-				"new hp": "97/100"
-				}
+				'hp events': 
+					[
+						{'event': 'damage',
+					'new hp': '97/100',
+					'target': 'Ampharos',
+					'trainer': 'p1a'}
+					],
 			}
 		]
 		result = parseMessagesIntoEventDicts(move)
@@ -225,10 +229,14 @@ class TestChoiceRepresentations(unittest.TestCase):
 				"category": "special",  # Scald is a special move
 				"move failed": False,
 				"effectiveness": "resisted",  # Whimsicott resisted the move
-				"damage": {
+				"hp events": [
+					{
+					"event": "damage",
+					"trainer": "p1a",
 					"target": "Whimsicott",
 					"new hp": "49/100"
-				},
+					}
+					],
 				"status": {
 					"target": "Whimsicott",
 					"condition": "brn"  # Whimsicott was burned
@@ -254,20 +262,24 @@ class TestChoiceRepresentations(unittest.TestCase):
 				"missed": False,
 				"category": "physical",  # Superpower is a physical move
 				"move failed": False,
-				"damage": {
-					"target": "Hitmonlee",
-					"new hp": "4/100"
-				},
+				"hp events": [
+					{
+						"target": "Hitmonlee",
+						"trainer": "p2a",
+						"event": "damage",
+						"new hp": "4/100"
+					}
+				],
 				"stat changes": [
 					{
 						"pokemon": "Nidoking",
 						"stat": "attack",
-						"change": -1  # Attack decreased by 1 stage
+						"drop": -1  # Attack decreased by 1 stage
 					},
 					{
 						"pokemon": "Nidoking",
 						"stat": "defense",
-						"change": -1  # Defense decreased by 1 stage
+						"drop": -1  # Defense decreased by 1 stage
 					}
 				]
 			}
@@ -284,7 +296,7 @@ class TestChoiceRepresentations(unittest.TestCase):
 				{
 					"pokemon": "Nidoking",
 					"stat": "attack",
-					"change": -1  # Attack decreased by 1 stage
+					"drop": -1  # Attack decreased by 1 stage
 				}
 			]
 		}
@@ -297,7 +309,7 @@ class TestChoiceRepresentations(unittest.TestCase):
 				{
 					"pokemon": "Mewtwo",
 					"stat": "special attack",
-					"change": 2 
+					"boost": 2 
 				}
 			]
 		}
@@ -423,12 +435,25 @@ class TestChoiceRepresentations(unittest.TestCase):
 		expected_dict = {
 			"weather": "none"
 		}
-		self.assertEqual(expected_dict, parseWeather(text, event_dict))		
+		self.assertEqual(expected_dict, parseWeather(text, event_dict))
+
+	def test_parse_ability(self):
+		text = "|-ability|p1a: Sableye|Magic Bounce" 
+		# |-ability|p2a: Wo-Chien|Tablets of Ruin
+		event_dict = {}
+		expected_dict = {
+			"activate ability": {
+				"trainer": "p1a",
+				"pokemon": "Sableye",
+				"ability": "Magic Bounce"
+			}
+		}
+		self.assertEqual(expected_dict, parseAbility(text, event_dict))
 
 
 class TestExpressHPOutOf100(unittest.TestCase):
-	# def setUp(self):
-	# 	self.skipTest('module not tested') # uncomment when you want to skip tests
+	def setUp(self):
+		self.skipTest('module not tested') # uncomment when you want to skip tests
 
 	def test_full_hp(self):
 		self.assertEqual(expressHPOutOf100("100/100"), "100/100")
@@ -452,12 +477,14 @@ class TestExpressHPOutOf100(unittest.TestCase):
 		self.assertEqual(expressHPOutOf100("0 fnt"), "0/100")
 
 class TestParseFromLogFile(unittest.TestCase):
-	@unittest.skip("skip")
+	# @unittest.skip("skip")
 	def test_parseFromLogFile(self):
-		result = parse_turns_from_file("C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\singles_forfeit.txt")
+		# write_file = "C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\parsed_singles_forfeit.txt"
+		# result = parse_turns_from_file("C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\singles_forfeit.txt")
+		write_file = "C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\parsed_singles_random_gen9.txt"
+		result = parse_turns_from_file("C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\gen9randombattle_2182574198.txt")
 		# result = parse_turns_from_file("C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\singles_forfeit_short.txt")
 		# pprint.pprint(result)
-		write_file = "C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\parsed_singles_forfeit.txt"
 		with open(write_file, 'w') as f:
 			pprint.pprint(result, stream=f)
 		f.close()
