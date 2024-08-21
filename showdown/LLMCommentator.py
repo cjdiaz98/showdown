@@ -16,11 +16,12 @@ class LLMCommentator():
 	promptTemplate = ChatPromptTemplate.from_messages([
 	("system", """You are a world class Pokemon battle commentator and boisterous personality. You are tasked with providing insightful,
 	 witty and lively commentary on a Pokemon battle. You aren't partial to either side. I'll give you information about a turn that just took place in the battle,
-	 and you'll provide commentary on it. You can also provide general commentary on the battle as a whole."""),
-	 MessagesPlaceholder("chat_history")
-	("human", "{input}")
+	as well as some previous commentary describing what previously happened in the battle. In return you'll provide commentary on the turn.\
+  	You can also provide general commentary on the battle as a whole."""),
+	 ("ai", "{previous_turn}"),
+	("human", "{turn_data}")
 	])
-	# previous_round = None
+	previous_round = "The battle has just begun!"
 
 	def __init__(self):
 		ShowdownConfig.configure()
@@ -37,11 +38,14 @@ class LLMCommentator():
 				# other params...
 			)
 
-	def get_commentary(self, turn_data: dict) -> str:
+	def get_commentary(self, turn_data: str) -> str:
 		if self.llm is None:
 			return "No OpenAI key provided. Cannot generate commentary."
-		prompt = self.promptTemplate.invoke(turn_data)
+		turn_data = "Current turn: \n" + turn_data
+		prompt = self.promptTemplate.format_messages(previous_turn = self.previous_round, turn_data = turn_data)
+		print(prompt)
 		commentary = self.llm.invoke(prompt)
+		self.previous_round = commentary.content
 		return commentary
 
 BOOST_NAMES = {
@@ -462,16 +466,17 @@ subevent_parser_lookup = {
 		# '-singleturn': singleturn,
 }
 
-def parse_turns_from_file(filename):
+def parse_turns_from_file(filename) -> dict[int, dict]:
 	# Initialize variables
 	with open(filename, 'r') as file:
 		content = file.read()
 	parsed_data = {}
 
 	# Parse out just the starting turn data
-	starting_turn = content.split("|start")[1].split("|turn")[0].strip().strip()
-
-	parsed_data[0] = parseMessagesIntoEventDicts(starting_turn)
+	split_on_start = content.split("|start")
+	if len(split_on_start) > 1:
+		starting_turn = split_on_start[1].split("|turn")[0].strip().strip()
+		parsed_data[0] = parseMessagesIntoEventDicts(starting_turn)
 
 	# Split content by "|turn|" to get individual turns
 	turns = content.split("|turn|")[1:]  # Skip the first empty part before the first "turn"
@@ -491,10 +496,17 @@ def parse_turns_from_file(filename):
 		# print(messages + "\n")
 		# Pass the extracted messages to the provided function
 		event_dict = parseMessagesIntoEventDicts(messages)
-		json_object = json.dumps(event_dict, indent = 4)
-		commentary = llm_commentator.get_commentary(json_object)
-		pprint.pprint(commentary.content)
 		# Store the result in the dictionary using the turn number as the key
 		parsed_data[turn_number] = event_dict
 
 	return parsed_data
+
+def getCommentaryOnTurns(turns: dict[int, dict]) -> list[str]:
+	llm_commentator = LLMCommentator()
+	turn_commentary = []
+	for turn_number, turn_data in turns.items():
+		json_object = json.dumps(turn_data, separators=(',', ':')) # make the json more compact
+		commentary = llm_commentator.get_commentary(json_object)
+		commentary = 'Turn {turn_no}\n'.format(turn_no = turn_number) + commentary.content + "\n"
+		turn_commentary.append(commentary)
+	return turn_commentary

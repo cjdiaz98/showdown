@@ -481,10 +481,16 @@ class TestParseFromLogFile(unittest.TestCase):
 	def test_parseFromLogFile(self):
 		# write_file = "C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\parsed_singles_forfeit.txt"
 		# result = parse_turns_from_file("C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\singles_forfeit.txt")
-		write_file = "C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\parsed_singles_random_gen9.txt"
-		result = parse_turns_from_file("C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\gen9randombattle_2182574198.txt")
+		write_parsed = "C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\parsed_singles_random_gen9.txt"
+		write_commentary = "C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\commentary_singles_random_gen9.txt"
+		result = parse_turns_from_file("C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\ranbat_short.txt")
+
+		# result = parse_turns_from_file("C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\gen9randombattle_2182574198.txt")
 		# result = parse_turns_from_file("C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\singles_forfeit_short.txt")
-		# pprint.pprint(result)
-		with open(write_file, 'w') as f:
-			pprint.pprint(result, stream=f)
+		# with open(write_parsed, 'w') as f:
+		# 	pprint.pprint(result, stream=f)		
+
+		commentary = getCommentaryOnTurns(result)
+		with open(write_commentary, 'w') as f:
+			pprint.pprint(commentary, stream=f)
 		f.close()
