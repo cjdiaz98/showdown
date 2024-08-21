@@ -76,11 +76,14 @@ class TestChoiceRepresentations(unittest.TestCase):
 		event_dict = dict()
 		damage = "|-damage|p1a: Sableye|324/360"
 		expected_dict = {
-			"damage": {
-			# "trainer": "p1a",
-			"target": "Sableye",
-			"new hp": "90/100"
-			}
+			"hp events": [
+				{
+					"event": "damage",
+					"trainer": "p1a",
+					"target": "Sableye",
+					"new hp": "90/100"
+				}
+			]
 		}
 		result = parseDamageOrHeal(damage, event_dict)
 		self.assertEqual(expected_dict, result)
@@ -88,13 +91,17 @@ class TestChoiceRepresentations(unittest.TestCase):
 	def test_parse_damage_with_condition(self):
 		text = "|-damage|p1a: Gardevoir|162/309 par|[from] confusion"
 		expected_dict = {
-			"damage": {
-			"target": "Gardevoir",
-			"new hp": "53/100",
-			"source": {
-				"factor": "confusion"
-				}
+			"hp events": [
+				{
+					"event": "damage",
+					"trainer": "p1a",
+					"target": "Gardevoir",
+					"new hp": "53/100",
+					"source": {
+						"factor": "confusion"
+					}
 			}
+			]
 		}
 		event_dict = dict()
 		self.assertEqual(expected_dict, parseDamageOrHeal(text, event_dict))
@@ -103,14 +110,17 @@ class TestChoiceRepresentations(unittest.TestCase):
 		event_dict = dict()
 		damage = "|-heal|p1a: Tyrantrum|156/339|[from] item: Leftovers"
 		expected_dict = {
-			"heal": {
-			# "trainer": "p1a",
-			"target": "Tyrantrum",
-			"new hp": "47/100",
-			"source": {
-				"factor": "item: Leftovers"
-				}
+			"hp events" : [
+				{
+				"trainer": "p1a",
+				"event": "heal",
+				"target": "Tyrantrum",
+				"new hp": "47/100",
+				"source": {
+					"factor": "item: Leftovers"
+					}
 			}
+			]
 		}
 		result = parseDamageOrHeal(damage, event_dict)
 		self.assertEqual(expected_dict, result)

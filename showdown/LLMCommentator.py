@@ -167,9 +167,10 @@ def parseDamageOrHeal(msg: str, event_dict: dict) -> dict:
 	split_msg = msg.split('|')
 	if len(split_msg) >= 4:
 		hp_event_type = split_msg[1].replace('-', '') # heal or damage
-		target = split_msg[2].split(':')[1]
+		trainer, target = parseTrainerandPokemon(split_msg[2])
 		hp_event_info = {
 			"event": hp_event_type,
+			"trainer": trainer,
 			"target": target.strip(),
 			"new hp": expressHPOutOf100(parseOutHPString(msg)),
 		}
