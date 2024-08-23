@@ -1,7 +1,8 @@
 
 import unittest
 import pprint
-from showdown.LLMCommentator import *
+from showdown.Commentary.LLMCommentator import *
+from showdown.Commentary.parsingUtils import *
 
 class TestChoiceRepresentations(unittest.TestCase):
 	def setUp(self):
@@ -450,7 +451,6 @@ class TestChoiceRepresentations(unittest.TestCase):
 		}
 		self.assertEqual(expected_dict, parseAbility(text, event_dict))
 
-
 class TestExpressHPOutOf100(unittest.TestCase):
 	def setUp(self):
 		self.skipTest('module not tested') # uncomment when you want to skip tests
@@ -476,8 +476,18 @@ class TestExpressHPOutOf100(unittest.TestCase):
 	def test_faint(self):
 		self.assertEqual(expressHPOutOf100("0 fnt"), "0/100")
 
+class TestParseRoomEvents(unittest.TestCase):
+	def test_parse_rooms_to_join(self):
+		text = """|queryresponse|roomlist|{"rooms":{"battle-gen9randombattle-2184939885":{"p1":"player1","p2":"player2","minElo":1143}}}"""
+		expected = [{
+			"room name": "battle-gen9randombattle-2184939885",
+			"p1": "player1",
+			"p2": "player2",
+		}]
+		self.assertEqual(expected, parseRoomsToJoin(text))
+
 class TestParseFromLogFile(unittest.TestCase):
-	# @unittest.skip("skip")
+	@unittest.skip("skip")
 	def test_parseFromLogFile(self):
 		# write_file = "C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\parsed_singles_forfeit.txt"
 		# result = parse_turns_from_file("C:\\Users\\cjdia\\Desktop\\Study\\PokemonShowdown\\singles_forfeit.txt")
@@ -494,3 +504,33 @@ class TestParseFromLogFile(unittest.TestCase):
 		with open(write_commentary, 'w') as f:
 			pprint.pprint(commentary, stream=f)
 		f.close()
+
+
+class TestSmartChunking(unittest.TestCase):
+	def test_chunk_below_max_size(self):
+		message = "This is a test message."
+		chunks = chunk_message_smartly(100, message)
+		self.assertEqual(chunks, ["This is a test message."])
+	
+	def test_chunk_at_sentence_boundary(self):
+		message = "This is a test message. It should be split at the period."
+		chunks = chunk_message_smartly(30, message)
+		self.assertEqual(chunks, ["This is a test message.", "It should be split at the period."])
+
+	def test_chunk_size_smaller_than_sentence(self):
+		message = "This sentence is longer than the limit. It should still split at the period."
+		chunks = chunk_message_smartly(10, message)
+		self.assertEqual(chunks, ["This sentence is longer than the limit.", "It should still split at the period."])
+
+	def test_nonpositive_limit_throws_exception(self):
+		message = "Message"
+		self.assertRaises(ValueError, chunk_message_smartly, 0, message)
+
+	def test_negative_limit_throws_exception(self):
+		message = "Message"
+		self.assertRaises(ValueError, chunk_message_smartly, -1, message)
+
+	def test_message_is_empty_returns_empty_list(self):
+		message = ""
+		chunks = chunk_message_smartly(10, message)
+		self.assertEqual(chunks, [])

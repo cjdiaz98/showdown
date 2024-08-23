@@ -1,5 +1,3 @@
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
 from config import ShowdownConfig
 from showdown.battle import Pokemon, LastUsedMove
 import constants
@@ -7,46 +5,6 @@ from data import all_move_json
 import math
 import pprint
 import json 
-
-from langchain.chains import create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-
-class LLMCommentator():
-	promptTemplate = ChatPromptTemplate.from_messages([
-	("system", """You are a world class Pokemon battle commentator and boisterous personality. You are tasked with providing insightful,
-	 witty and lively commentary on a Pokemon battle. You aren't partial to either side. I'll give you information about a turn that just took place in the battle,
-	as well as some previous commentary describing what previously happened in the battle. In return you'll provide commentary on the turn.\
-  	You can also provide general commentary on the battle as a whole."""),
-	 ("ai", "{previous_turn}"),
-	("human", "{turn_data}")
-	])
-	previous_round = "The battle has just begun!"
-
-	def __init__(self):
-		ShowdownConfig.configure()
-		if ShowdownConfig.open_ai_key != None:
-			self.llm = ChatOpenAI(
-				model="gpt-4o",
-				temperature=0,
-				max_tokens=None,
-				timeout=None,
-				max_retries=2,
-				api_key=ShowdownConfig.open_ai_key,
-				# base_url="...",
-				# organization="...",
-				# other params...
-			)
-
-	def get_commentary(self, turn_data: str) -> str:
-		if self.llm is None:
-			return "No OpenAI key provided. Cannot generate commentary."
-		turn_data = "Current turn: \n" + turn_data
-		prompt = self.promptTemplate.format_messages(previous_turn = self.previous_round, turn_data = turn_data)
-		print(prompt)
-		commentary = self.llm.invoke(prompt)
-		self.previous_round = commentary.content
-		return commentary
 
 BOOST_NAMES = {
 	"atk": "attack",
@@ -105,40 +63,6 @@ def pokemonDictRepresentation(pkm: Pokemon) -> dict:
 		if boost != 0:
 			boosts[boost_name] = boost
 	pkm_dict["boosts"] = boosts
-
-def pokemonChoiceDictRepresentation(last_used_move: LastUsedMove,
-									trainer: str,
-									move_string: str) -> dict:
-	choice_dict  = dict()
-	choice_dict["pokemon"] = last_used_move.pokemon_name # e.g. move, switch
-	choice_dict["turn"] = last_used_move.turn
-	choice_dict["actor"] = trainer
-
-	if last_used_move.choice == constants.SWITCH_STRING:
-		choice_dict["choice"] = constants.SWITCH_STRING
-		choice_dict["switch details"]  = parseSwitch()
-	else:
-		choice_dict["choice"] = "move"
-		move_dict = dict()
-		move_dict["name"] = last_used_move.move_name
-
-		move_info = all_move_json[last_used_move.move_name]
-		move_dict["category"] = move_info["category"]
-		hit_target = False
-		move_dict["hit target"] = hit_target # to do: hit, miss, crit, etc.
-		move_dict["move failed"] = False # to do
-		move_dict["target"] = "" # to do: self, opponent, etc.
-		
-		if move_dict["category"] == constants.MoveCategory.STATUS:
-			parseStatusMove()
-		elif hit_target == "hit": # not a status move and it hit the target
-			parseAttackMove()
-		move_dict["effects"] = {} # to do: burn, flinch, etc.
-
-		# if move_effects != {}:
-		# 	move_dict["effects"] = move_effects
-		choice_dict["move details"] = move_dict
-		# to do: handle moves that force switches, switch the user, etc.
 
 def parseSwitchOrDrag(msg: str) -> dict:
 	split_msg = msg.split('|')[1:]
@@ -374,47 +298,47 @@ def parseVolatileStatus(text: str, event_dict: dict) -> dict:
 	return event_dict
 
 def parseWeather(text: str, event_dict: dict) -> dict:
-    # Split the message by '|'
-    parts = text.split('|')
+	# Split the message by '|'
+	parts = text.split('|')
 
-    # The weather condition is in the second part (index 2)
-    weather_condition = parts[2].lower()  # Convert to lowercase for uniformity
+	# The weather condition is in the second part (index 2)
+	weather_condition = parts[2].lower()  # Convert to lowercase for uniformity
 
 	# https://github.com/smogon/pokemon-showdown/blob/6a1360c35b8aa5f7d54e32a492626d5298caa6f7/data/conditions.ts#L462 
-    # Map the weather conditions to standard names
-    weather_map = {
-        "raindance": "rain",
-        "primordialsea": "harsh rain",
-        "sunnyday": "sun",
-        "desolateland": "harsh sun",
-        "sandstorm": "sandstorm",
-        "hail": "hail", 
-        "snow": "snow",  # Hail has been replaced by snow in later generations
+	# Map the weather conditions to standard names
+	weather_map = {
+		"raindance": "rain",
+		"primordialsea": "harsh rain",
+		"sunnyday": "sun",
+		"desolateland": "harsh sun",
+		"sandstorm": "sandstorm",
+		"hail": "hail", 
+		"snow": "snow",  # Hail has been replaced by snow in later generations
 		"delta stream": "delta stream",
-        "none": "none"
-    }
+		"none": "none"
+	}
 
-    # Assign the mapped weather condition
-    event_dict["weather"] = weather_map.get(weather_condition, "none")  # Default to "none" if not found
+	# Assign the mapped weather condition
+	event_dict["weather"] = weather_map.get(weather_condition, "none")  # Default to "none" if not found
 
-    return event_dict
+	return event_dict
 
 def parseAbility(text: str, event_dict: dict) -> dict:
-    # Split the message by '|'
-    parts = text.split('|')
-    
-    # Extract the trainer and Pokemon part (second part) and ability name (third part)
-    trainer, pokemon = parseTrainerandPokemon(parts[2])
-    ability = parts[3].strip()  # Ability name is the third part
+	# Split the message by '|'
+	parts = text.split('|')
+	
+	# Extract the trainer and Pokemon part (second part) and ability name (third part)
+	trainer, pokemon = parseTrainerandPokemon(parts[2])
+	ability = parts[3].strip()  # Ability name is the third part
 
-    # Populate the event dictionary with the parsed data
-    event_dict["activate ability"] = {
+	# Populate the event dictionary with the parsed data
+	event_dict["activate ability"] = {
 		"trainer": trainer,
-        "pokemon": pokemon,
-        "ability": ability
-    }
+		"pokemon": pokemon,
+		"ability": ability
+	}
 
-    return event_dict
+	return event_dict
 
 main_event_parser_lookup = {
 		'move': parseUseMove,
@@ -480,7 +404,6 @@ def parse_turns_from_file(filename) -> dict[int, dict]:
 
 	# Split content by "|turn|" to get individual turns
 	turns = content.split("|turn|")[1:]  # Skip the first empty part before the first "turn"
-	llm_commentator = LLMCommentator()
 	for i in range(len(turns)):
 		turn_data = turns[i]
 		# print(turn_data)
@@ -501,12 +424,63 @@ def parse_turns_from_file(filename) -> dict[int, dict]:
 
 	return parsed_data
 
-def getCommentaryOnTurns(turns: dict[int, dict]) -> list[str]:
-	llm_commentator = LLMCommentator()
-	turn_commentary = []
-	for turn_number, turn_data in turns.items():
-		json_object = json.dumps(turn_data, separators=(',', ':')) # make the json more compact
-		commentary = llm_commentator.get_commentary(json_object)
-		commentary = 'Turn {turn_no}\n'.format(turn_no = turn_number) + commentary.content + "\n"
-		turn_commentary.append(commentary)
-	return turn_commentary
+def parseRoomsToJoin(text) -> list[dict]:
+	print("Parse rooms to join")
+	print(text)
+
+	# Split the text and isolate the JSON part
+	json_text = text.split('|roomlist|')[-1]
+	
+	# Parse the JSON string into a Python dictionary
+	data = json.loads(json_text)
+	
+	# Extract battle rooms from the data
+	rooms = data.get("rooms", {})
+	
+	# Prepare the result list
+	result = []
+	for room_name, room_info in rooms.items():
+		# For each room, extract the battle name, p1, and p2
+		result.append({
+			"room name": room_name,
+			"p1": room_info.get("p1"),
+			"p2": room_info.get("p2")
+		})
+	
+	return result
+
+import re 
+def chunk_message_smartly(max_message_size: int, message: str) -> list[str]:
+    # Handle non-positive message size limit
+    if max_message_size <= 0:
+        raise ValueError("max_message_size must be greater than zero")
+
+    # Handle empty message
+    if not message:
+        return []
+
+    # Split message at sentence boundaries (period, question mark, exclamation mark, etc.)
+    sentences = re.split(r'(?<=[.!?])\s+', message.strip())
+    
+    chunks = []
+    current_chunk = ""
+
+    for sentence in sentences:
+        # If adding the current sentence would exceed the max message size
+        if len(current_chunk) + len(sentence) + 1 > max_message_size:  # +1 accounts for the space
+            # If current chunk is not empty, append it to chunks
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+            current_chunk = sentence  # Start a new chunk with the current sentence
+        else:
+            # Add the sentence to the current chunk
+            if current_chunk:
+                current_chunk += " " + sentence
+            else:
+                current_chunk = sentence
+
+    # Append any remaining chunk
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+    
+    return chunks

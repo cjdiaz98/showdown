@@ -10,6 +10,7 @@ from config import ShowdownConfig, init_logging
 
 from teams import load_team
 from showdown.run_battle import pokemon_battle
+from showdown.Commentary.spectator import Spectator
 from showdown.websocket_client import PSWebsocketClient
 
 from data import all_move_json
@@ -81,6 +82,10 @@ async def showdown():
             )
         elif ShowdownConfig.bot_mode == constants.SEARCH_LADDER:
             await ps_websocket_client.search_for_match(ShowdownConfig.pokemon_mode, team)
+        elif ShowdownConfig.bot_mode == constants.COMMENTATE:
+            spectator = Spectator()
+            await spectator.spectate_and_read_logs(ps_websocket_client)
+            continue
         else:
             raise ValueError("Invalid Bot Mode: {}".format(ShowdownConfig.bot_mode))
 
@@ -98,12 +103,11 @@ async def showdown():
             break
 
 # Enable the debugger to listen on port 5678
-debugpy.listen(("0.0.0.0", 5678))
-print("Waiting for debugger to attach...")
-
-# Wait for VS Code to connect before continuing
-debugpy.wait_for_client()
-print("Debugger attached, continuing program execution...")
+# debugpy.listen(("0.0.0.0", 5678))
+# print("Waiting for debugger to attach...")
+# # Wait for VS Code to connect before continuing
+# debugpy.wait_for_client()
+# print("Debugger attached, continuing program execution...")
 
 if __name__ == "__main__":
     try:

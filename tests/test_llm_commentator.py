@@ -2,7 +2,7 @@
 import unittest
 from collections import defaultdict
 
-from showdown.LLMCommentator import *
+from showdown.Commentary.LLMCommentator import *
 
 class TestChoiceRepresentations(unittest.TestCase):
 	def test_pokemon_choice_dict_representation_target_status_move(self):

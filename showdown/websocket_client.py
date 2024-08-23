@@ -7,6 +7,8 @@ import time
 import logging
 logger = logging.getLogger(__name__)
 
+from showdown.Commentary.parsingUtils import parseRoomsToJoin
+from config import ShowdownConfig
 
 class LoginError(Exception):
     pass
@@ -146,6 +148,48 @@ class PSWebsocketClient:
         await self.update_team(battle_format, team)
         message = ["/search {}".format(battle_format)]
         await self.send_message("", message)
+
+    async def find_rooms(self):
+        # to do: this isn't working yet. Not sure if the message is correct
+        logger.debug("Searching for match to spectate")
+        message = "|/query roomlist gen9randombattle" # to do: expand the type of battles to spectate
+        await self.websocket.send(message)
+        self.last_message = message
+        response = ""
+        while "roomlist" not in response:
+            response = await self.receive_message()
+
+        rooms = parseRoomsToJoin(response)
+        if len(rooms) == 0:
+            logger.error("No rooms found")
+            return None
+        first_room = rooms[0]
+        return first_room["room name"]
+    
+
+    async def join_random_room_as_spectator(self) -> str|None:
+        room_name = await self.find_rooms()
+
+        if room_name is not None:
+            try:
+                # Using asyncio.timeout if you're on Python 3.11+
+                # For older versions, use asyncio.wait_for() as shown below.
+                await asyncio.wait_for(self.join_room(room_name), timeout=10)
+                return room_name
+            except asyncio.TimeoutError:
+                print("Unable to join room: Timed out.")
+            except Exception as e:
+                logger.error(f"An error occurred: {e}")
+        else:
+            logger.error("No rooms found to spectate")
+        return None
+
+    async def spectate_specified_room(self):
+        room_name = ShowdownConfig.spectate_room
+        if room_name is not None:
+            await self.join_room(room_name)
+        else:
+            logger.error("No rooms found to spectate")
 
     async def leave_battle(self, battle_tag, save_replay=False):
         if save_replay:

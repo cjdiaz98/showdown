@@ -1,14 +1,17 @@
 BATTLE_BOT=safest
 WEBSOCKET_URI=wss://sim3.psim.us/showdown/websocket
-PS_USERNAME=MyUsername
-PS_PASSWORD=MyPassword
-BOT_MODE=SEARCH_LADDER # CHALLENGE_USER
+PS_USERNAME=cjflexbot2
+PS_PASSWORD=Porygonz
+BOT_MODE=COMMENTATE # CHALLENGE_USER, SEARCH_LADDER
 POKEMON_MODE=gen7randombattle
 RUN_COUNT=1
 
 USER_TO_CHALLENGE=SomeOtherPerson
 TEAM_NAME=gen8/ou/clef_sand
 SAVE_REPLAY=False
+
+# Spectating
+SPECTATE_ROOM=battle-gen9randombattle-2184968575
 
 # LLM Variables
 OPEN_AI_KEY=
