@@ -4,6 +4,7 @@ import logging
 from showdown.websocket_client import PSWebsocketClient
 from showdown.Commentary.LLMCommentator import LLMCommentator
 from showdown.Commentary.parsingUtils import chunk_message_smartly
+from showdown.Commentary.constants import *
 
 MAX_MESSAGE_LENGTH = 300  # Arbitrary limit, adjust based on Pokémon Showdown's exact message limit
 MESSAGE_DELAY = .25  # Delay in seconds between messages
@@ -28,9 +29,10 @@ class Spectator:
 			if room_name:
 				self.curr_connections += 1
 				self.logger.info(f"Joined room successfully. Current connections: {self.curr_connections}")
-
+				self.periodically_send_disclosure(ps_websocket_client)
 				# Read logs from the battle
 				await self.read_logs_from_battle(ps_websocket_client, room_name)
+				await ps_websocket_client.leave_battle(room_name)
 			else:
 				self.logger.error("Failed to join room.")
 
@@ -53,7 +55,11 @@ class Spectator:
 						self.logger.error(f"Error receiving message: {e}")
 						continue
 					
-					if not battle_has_started: 
+					if self.stop_command_present(msg):
+						self.logger.info("Stop command detected. Leaving battle.")
+						break
+
+					if not battle_has_started:
 						if "|start" in msg:
 							battle_has_started = True
 						else:
@@ -86,6 +92,48 @@ class Spectator:
 						self.logger.debug("Continuing to listen for messages...")
 
 			finally:
-				# f.close()
 				self.curr_connections -= 1
 				self.logger.info(f"Battle finished. Current connections: {self.curr_connections}")
+
+	async def periodically_send_disclosure(self, ps_websocket_client, interval=120):
+		"""
+		This function will periodically call the `disclosureAboutHowToTurnOff` method every `interval` seconds.
+		"""
+		while True:
+			try:
+				await self.disclosureAboutHowToTurnOff(ps_websocket_client)
+			except Exception as e:
+				self.logger.error(f"Error in sending disclosure: {e}")
+
+		# Sleep for the specified interval (in seconds)
+		await asyncio.sleep(interval)
+
+	async def disclosureAboutHowToTurnOff(self, ps_websocket_client: PSWebsocketClient):
+		"""
+		This method sends an informational message to the room about how to turn off the bot.
+		"""
+		await ps_websocket_client.send_message("", ["""Hello, my name is {}. I'll provide commentary on your pokemon battle.
+											  If you want me to stop at anytime, please type \"{}\" and I will leave.""".format(BOT_NAME, BOT_STOP_PHRASE)])
+
+	def stop_command_present(self, message: str) -> bool:
+		"""
+		This method scans each line of incoming messages from the Pokémon Showdown room for a user chat message 
+		that includes the stop phrase (BOT_STOP_PHRASE). If the stop phrase is detected, return True.
+		"""
+		# Split the message into lines and make the stop phrase case-insensitive
+		msg_lines = message.split('\n')
+		stop_phrase = BOT_STOP_PHRASE.lower()
+
+		# Check each line for the stop phrase
+		for line in msg_lines:
+			# Ensure the line starts with "|c|" indicating it's a user chat message
+			if line.startswith("|c|"):
+
+				# Check if the user message contains the stop phrase
+				if stop_phrase in line.lower():
+					self.logger.info(f"Stop command detected.")
+					return True
+
+		# If no stop phrase is found, return False
+		return False
+
