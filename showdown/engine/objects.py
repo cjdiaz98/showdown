@@ -3,6 +3,7 @@ from copy import copy
 
 import constants
 from data import all_move_json
+from typing import Optional, List, Dict
 
 
 boost_multiplier_lookup = {
@@ -25,7 +26,7 @@ boost_multiplier_lookup = {
 class State(object):
     __slots__ = ('user', 'opponent', 'weather', 'field', 'trick_room')
 
-    def __init__(self, user, opponent, weather, field, trick_room):
+    def __init__(self, user: 'Side', opponent: 'Side', weather: Optional[str], field: Optional[str], trick_room: bool):
         self.user = user
         self.opponent = opponent
         self.weather = weather
@@ -132,7 +133,7 @@ class State(object):
 class Side(object):
     __slots__ = ('active', 'reserve', 'wish', 'side_conditions', 'future_sight')
 
-    def __init__(self, active, reserve, wish, side_conditions, future_sight):
+    def __init__(self, active: 'Pokemon', reserve: Dict[str, 'Pokemon'], wish: bool, side_conditions: Dict[str, int], future_sight: bool):
         self.active = active
         self.reserve = reserve
         self.wish = wish

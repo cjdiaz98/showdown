@@ -6,7 +6,8 @@ import constants
 from showdown.engine.objects import StateMutator
 from showdown.engine.select_best_move import pick_safest
 from showdown.engine.select_best_move import get_payoff_matrix
-
+from showdown.battle import Battle, Side
+from data import all_move_json
 
 logger = logging.getLogger(__name__)
 
@@ -126,3 +127,16 @@ def pick_safest_move_using_dynamic_search_depth(battles):
     logger.debug("Safest: {}, {}".format(bot_choice, payoff))
     logger.debug("Depth: {}".format(search_depth))
     return bot_choice
+
+def get_battle_conditions(battle: Battle, side: Side) -> dict[str, bool]:
+    return {
+        constants.REFLECT: side.side_conditions[constants.REFLECT],
+        constants.LIGHT_SCREEN: side.side_conditions[constants.LIGHT_SCREEN],
+        constants.AURORA_VEIL: side.side_conditions[constants.AURORA_VEIL],
+        constants.WEATHER: battle.weather,
+        constants.TERRAIN: battle.field
+    }
+
+def get_move_relevant_data(move: str) -> dict:
+    move_data = all_move_json.get(move)
+    return move_data

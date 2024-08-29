@@ -356,18 +356,6 @@ class TestChoiceRepresentations(unittest.TestCase):
 
 	def test_terrain_take_effect(self):
 		text = "|-fieldstart|move: Grassy Terrain|[from] ability: Grassy Surge|[of] p2a: Tapu Bulu"
-		expected_dict = {}
-		options = None
-		self.assertEqual(expected_dict, options)
-
-	def test_terrain_effect_end(self):
-		text = "|-fieldend|move: Grassy Terrain|[from] ability: Psychic Surge|[of] p2a: Indeedee"
-		expected_dict = {}
-		options = None
-		self.assertEqual(expected_dict, options)
-
-	def test_terrain_take_effect(self):
-		text = "|-fieldstart|move: Grassy Terrain|[from] ability: Grassy Surge|[of] p2a: Tapu Bulu"
 		expected_dict = {
 			"field event": "fieldstart",
 			"field": "Grassy Terrain",
@@ -451,6 +439,21 @@ class TestChoiceRepresentations(unittest.TestCase):
 		}
 		self.assertEqual(expected_dict, parseAbility(text, event_dict))
 
+	@unittest.skip("Not implemented yet")
+	def test_pokemon_change_forms_mega(self):
+		# |detailschange|p1a: Sableye|Sableye-Mega, L87, M
+		# |-mega|p1a: Sableye|Sableye|Sablenite
+		expected_dict = {}
+		options = None
+		self.assertEqual(expected_dict, options)
+
+	@unittest.skip("Not implemented yet")
+	def test_pokemon_change_forms_ability(self):
+		# |-formechange|p2b: earl sweatshirt|Aegislash
+		expected_dict = {}
+		options = None
+		self.assertEqual(expected_dict, options)
+	
 class TestExpressHPOutOf100(unittest.TestCase):
 	def setUp(self):
 		self.skipTest('module not tested') # uncomment when you want to skip tests

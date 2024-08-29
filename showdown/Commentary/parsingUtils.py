@@ -1,5 +1,6 @@
 from config import ShowdownConfig
-from showdown.battle import Pokemon, LastUsedMove
+from showdown.battle import Pokemon, LastUsedMove, Side, State
+from showdown.battle_bots.helpers import get_move_relevant_data
 import constants
 from data import all_move_json
 import math
@@ -449,38 +450,104 @@ def parseRoomsToJoin(text) -> list[dict]:
 	
 	return result
 
+def parse_pokemon(pokemon: Pokemon) -> dict:
+	parsed_dict = {
+		'id': pokemon.name,
+		'level': pokemon.level,
+		'types': pokemon.types,
+		'current_hp_percentage': (pokemon.hp / pokemon.max_hp) * 100,
+		'ability': pokemon.ability,
+		'item': pokemon.item,
+		'attack': pokemon.stats[constants.ATTACK],
+		'defense': pokemon.stats[constants.DEFENSE],
+		'special-attack': pokemon.stats[constants.SPECIAL_ATTACK],
+		'special-defense': pokemon.stats[constants.SPECIAL_DEFENSE],
+		'speed': pokemon.stats[constants.SPEED],
+		'attack_boost': pokemon.boosts[constants.ATTACK],
+		'defense_boost': pokemon.boosts[constants.DEFENSE],
+		'special_attack_boost': pokemon.boosts[constants.SPECIAL_ATTACK],
+		'special_defense_boost': pokemon.boosts[constants.SPECIAL_DEFENSE],
+		'speed_boost': pokemon.boosts[constants.SPEED],
+		'accuracy_boost': pokemon.boosts[constants.ACCURACY],
+		'evasion_boost': pokemon.boosts[constants.EVASION],
+		'status': pokemon.status,
+		'terastallized': pokemon.terastallized,
+		'volatileStatus': pokemon.volatile_statuses,
+		'moves': [move[constants.ID] for move in pokemon.moves]
+	}
+	return parsed_dict
+
+def parse_side(side: Side) -> dict:
+	parsed_dict = {
+		"active": parse_pokemon(side.active),
+		"reserve": [parse_pokemon(pokemon) for pokemon in side.reserve],
+		"wish active": side.wish, 
+		"side conditions": side.side_conditions,
+		"future sight active": side.future_sight
+	}
+	return parsed_dict
+
+def parse_state(state: State) -> dict:
+    return {
+        "self": parse_side(state.user),
+        "opponent": parse_side(state.opponent),
+        constants.WEATHER: state.weather,
+        constants.FIELD: state.field,
+        constants.TRICK_ROOM: state.trick_room
+    }
+
+def parse_move_data(move_info: dict[str, any]) -> dict[str, any]:
+    attributes_to_copy = ['id', 'accuracy', 'basePower', 'category', 'priority', 'target', 'type']
+    
+    parsed_move_data = {attr: move_info[attr] for attr in attributes_to_copy if attr in move_info}
+    parsed_move_data['name'] = parsed_move_data.pop('id').lower()
+
+    # Add boosts if present
+    if 'boosts' in move_info:
+        parsed_move_data['boosts'] = move_info['boosts']
+
+    # Add status condition if present
+    if 'status' in move_info:
+        parsed_move_data['status'] = move_info['status']
+    
+    return parsed_move_data
+
 import re 
+
 def chunk_message_smartly(max_message_size: int, message: str) -> list[str]:
-    # Handle non-positive message size limit
-    if max_message_size <= 0:
-        raise ValueError("max_message_size must be greater than zero")
+	"""
+	Chunks message into logical parts based on sentence boundaries. Will try to get each chunk as close to max_message_size as possible.
+	"""
+	# Handle non-positive message size limit
+	if max_message_size <= 0:
+		raise ValueError("max_message_size must be greater than zero")
 
-    # Handle empty message
-    if not message:
-        return []
+	# Handle empty message
+	if not message:
+		return []
 
-    # Split message at sentence boundaries (period, question mark, exclamation mark, etc.)
-    sentences = re.split(r'(?<=[.!?])\s+', message.strip())
-    
-    chunks = []
-    current_chunk = ""
+	# Split message at sentence boundaries (period, question mark, exclamation mark, etc.)
+	sentences = re.split(r'(?<=[.!?])\s+', message.strip())
+	
+	chunks = []
+	current_chunk = ""
 
-    for sentence in sentences:
-        # If adding the current sentence would exceed the max message size
-        if len(current_chunk) + len(sentence) + 1 > max_message_size:  # +1 accounts for the space
-            # If current chunk is not empty, append it to chunks
-            if current_chunk:
-                chunks.append(current_chunk.strip())
-            current_chunk = sentence  # Start a new chunk with the current sentence
-        else:
-            # Add the sentence to the current chunk
-            if current_chunk:
-                current_chunk += " " + sentence
-            else:
-                current_chunk = sentence
+	for sentence in sentences:
+		# If adding the current sentence would exceed the max message size
+		if len(current_chunk) + len(sentence) + 1 > max_message_size:  # +1 accounts for the space
+			# If current chunk is not empty, append it to chunks
+			if current_chunk:
+				chunks.append(current_chunk.strip())
+			current_chunk = sentence  # Start a new chunk with the current sentence
+		else:
+			# Add the sentence to the current chunk
+			if current_chunk:
+				current_chunk += " " + sentence
+			else:
+				current_chunk = sentence
 
-    # Append any remaining chunk
-    if current_chunk:
-        chunks.append(current_chunk.strip())
-    
-    return chunks
+	# Append any remaining chunk
+	if current_chunk:
+		chunks.append(current_chunk.strip())
+	
+	return chunks
