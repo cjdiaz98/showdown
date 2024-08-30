@@ -1,5 +1,6 @@
 from config import ShowdownConfig
 from showdown.battle import Pokemon, LastUsedMove, Side, State
+from showdown.engine.objects import Pokemon as TransposePokemon
 from showdown.battle_bots.helpers import get_move_relevant_data
 import constants
 from data import all_move_json
@@ -450,12 +451,14 @@ def parseRoomsToJoin(text) -> list[dict]:
 	
 	return result
 
-def parse_pokemon(pokemon: Pokemon) -> dict:
+def parse_pokemon_old(pokemon: Pokemon) -> dict:
+	# note: this uses the Pokemon object from the showdown/battle.py file
+	pprint.pprint(pokemon)
 	parsed_dict = {
-		'id': pokemon.name,
+		'id': pokemon.id,
 		'level': pokemon.level,
 		'types': pokemon.types,
-		'current_hp_percentage': (pokemon.hp / pokemon.max_hp) * 100,
+		'current_hp_percentage': (pokemon.hp / pokemon.maxhp) * 100,
 		'ability': pokemon.ability,
 		'item': pokemon.item,
 		'attack': pokemon.stats[constants.ATTACK],
@@ -477,17 +480,45 @@ def parse_pokemon(pokemon: Pokemon) -> dict:
 	}
 	return parsed_dict
 
+def parse_pokemon(pokemon: TransposePokemon) -> dict:
+    # Create a dictionary representing the key attributes of the TransposePokemon instance
+    parsed_dict = {
+        'id': pokemon.id,
+        'level': pokemon.level,
+        'types': pokemon.types,
+        'current_hp_percentage': (pokemon.hp / pokemon.maxhp) * 100,
+        'ability': pokemon.ability,
+        'item': pokemon.item,
+        'attack': pokemon.attack,
+        'defense': pokemon.defense,
+        'special-attack': pokemon.special_attack,
+        'special-defense': pokemon.special_defense,
+        'speed': pokemon.speed,
+        'attack_boost': pokemon.attack_boost,
+        'defense_boost': pokemon.defense_boost,
+        'special_attack_boost': pokemon.special_attack_boost,
+        'special_defense_boost': pokemon.special_defense_boost,
+        'speed_boost': pokemon.speed_boost,
+        'accuracy_boost': pokemon.accuracy_boost,
+        'evasion_boost': pokemon.evasion_boost,
+        'status': pokemon.status,
+        'terastallized': pokemon.terastallized,
+        'volatileStatus': list(pokemon.volatile_status),
+        'moves': pokemon.moves
+    }
+    return parsed_dict
+
 def parse_side(side: Side) -> dict:
 	parsed_dict = {
 		"active": parse_pokemon(side.active),
-		"reserve": [parse_pokemon(pokemon) for pokemon in side.reserve],
+		"reserve": [parse_pokemon(pokemon) for pokemon in side.reserve.values()],
 		"wish active": side.wish, 
 		"side conditions": side.side_conditions,
 		"future sight active": side.future_sight
 	}
 	return parsed_dict
 
-def parse_state(state: State) -> dict:
+def parse_state(state: State) -> dict[str, any]:
     return {
         "self": parse_side(state.user),
         "opponent": parse_side(state.opponent),

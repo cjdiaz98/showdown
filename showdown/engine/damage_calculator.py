@@ -4,7 +4,9 @@ from copy import deepcopy
 import constants
 from data import all_move_json
 from data import pokedex
-
+from typing import Union
+from showdown.engine.objects import Pokemon
+from pprint import pprint
 
 pokemon_type_indicies = {
     'normal': 0,
@@ -67,7 +69,7 @@ SPECIAL_LOGIC_MOVES = {
 TERRAIN_DAMAGE_BOOST = 1.3
 
 
-def _calculate_damage(attacker, defender, move, conditions=None, calc_type='average'):
+def _calculate_damage(attacker: Pokemon, defender: Pokemon, move: Union[str, dict], conditions=None, calc_type='average'):
     # This function assumes the `move` dictionary has already been updated to account for move/item/ability special-effects
     # You may want to use `calculate_damage`
 

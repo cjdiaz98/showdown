@@ -26,6 +26,7 @@ from data.helpers import get_most_likely_item
 from data.helpers import get_most_likely_ability
 from data.helpers import get_most_likely_spread
 from data.helpers import get_all_possible_moves_for_random_battle
+import json
 
 from showdown.engine.objects import State
 from showdown.engine.objects import Side
@@ -445,6 +446,11 @@ class Battler:
             constants.SIDE_CONDITIONS: copy(self.side_conditions)
         }
 
+    def __repr__(self):
+        # battler_dict = self.to_dict()
+        # battler_dict[constants.SIDE_CONDITIONS] = list(battler_dict[constants.SIDE_CONDITIONS])
+        return str(self.to_dict())
+        # return json.dumps(battler_dict, indent=2)
 
 class Pokemon:
 
@@ -480,7 +486,7 @@ class Pokemon:
         self.terastallized = False
         self.fainted = False
         self.reviving = False
-        self.moves = []
+        self.moves: list[Move] = []
         self.status = None
         self.volatile_statuses = []
         self.boosts = defaultdict(lambda: 0)
