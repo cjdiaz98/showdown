@@ -39,7 +39,7 @@ class BattleBot(Battle):
 
 		move_damages = self.get_move_damages(state)
 		print("move damages: ", move_damages)
-		pprint("state_parsed: " + state_parsed)
+		pprint("state_parsed: " + str(state_parsed))
 		# to do: if pokemon is choiced, we have to pick only one move
 		# to do: get weaknesses of opponent and our pokemon 
 		# to do: get opponent speed range and compare to ours
@@ -48,10 +48,10 @@ class BattleBot(Battle):
 		# to do: implement bots monologuing to their opponent. Then we can actually implement bots that talk back to the opponent
 		prompt = format_prompt(my_options, opponent_options, move_damages, state_parsed)
 
-		if self.force_switch or not moves:
-			return format_decision(self, switches[0])
-
-		return format_decision(self, choice)
+		# if self.force_switch or not moves:
+			# return format_decision(self, switches[0])
+		return None
+		# return format_decision(self, choice)
 
 	def get_all_switch_options(self):
 		return [action for action in self.get_all_options() if action.startswith(constants.SWITCH_STRING + " ")]

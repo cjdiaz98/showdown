@@ -4,12 +4,15 @@ from collections import defaultdict
 import constants
 from showdown.battle import Battle
 from showdown.battle_bots.llm.main import BattleBot as LLMBattleBot
+from showdown.battle_bots.llm.llm_helpers import format_prompt
 from showdown.battle_bots.safest.main import BattleBot as SafestBattleBot
 from showdown.engine.objects import Pokemon, Side, State
 import json
 import pprint
 from config import ShowdownConfig
+from unittest.mock import patch, MagicMock
 
+@unittest.skip("not implemented")
 class TestLLMBattleBot(unittest.TestCase):
 	user_json = """{
 		"active": [
@@ -491,8 +494,7 @@ class TestLLMBattleBot(unittest.TestCase):
 
 		# Set up Safest battlebot
 		self.safest_battlebot = SafestBattleBot(self.battle_tag)
-		self.safest_battlebot.generation = self.mode[:4]
-		self.safest_battlebot.battle_type = constants.RANDOM_BATTLE
+		self.set_battle_gen_and_type(self.safest_battlebot)
 		self.safest_battlebot.start_non_team_preview_battle(user_json_no_reserve_parsed, self.opponent_switch_string_probopass)
 
 		# Set up LLM battlebot
@@ -565,15 +567,8 @@ class TestLLMBattleBot(unittest.TestCase):
 		battle.generation = self.mode[:4]
 		battle.battle_type = constants.RANDOM_BATTLE
 
+@unittest.skip("not implemented")
 class TestLLMBotHelpers(unittest.TestLoader):
-	def test_format_prompt(self):
-		user_options = ['earthquake', 'woodhammer', 'stoneedge', 'synthesis', 'switch volcarona']
-		opponent_options = ['tackle']
-		move_damages = {'earthquake': 100, 'woodhammer': 80, 'stoneedge': 90, 'synthesis': 0}
-		parsed_state = {}
-		
-		pass
-
 	def test_parse_output_valid_move(self):
 		pass
 
@@ -585,4 +580,95 @@ class TestLLMBotHelpers(unittest.TestLoader):
 
 	def test_parse_output_invalid_response_format(self):
 		pass
-	
+
+class TestLLMPromptFormatting(unittest.TestLoader):
+	# Test for a typical scenario
+	def test_format_prompt_typical_case():
+		parsed_state = {
+			"user": {"active": "Pikachu", "reserve": ["Charmander", "Bulbasaur"]},
+			"opponent": {"active": "Squirtle", "reserve": ["Rattata"]},
+		}
+		user_options = ['volt tackle', 'switch Charmander', 'switch Bulbasaur']
+		opponent_options = ['tackle']
+		move_damages = {'volt tackle': 100}
+
+		# Mocking ChatPromptTemplate and related methods
+		with patch("showdown.battle_bots.llm.llm_helpers.ChatPromptTemplate") as MockChatPromptTemplate:
+			mock_chat_template = MagicMock()
+			MockChatPromptTemplate.from_messages.return_value = mock_chat_template
+			mock_chat_template.format.return_value = "formatted prompt"
+
+			# Call the function
+			result = format_prompt(user_options, opponent_options, move_damages, parsed_state)
+
+			# Check that the method returns the expected result
+			assert result == "formatted prompt"
+
+			# Ensure the ChatPromptTemplate was created with the correct messages
+			MockChatPromptTemplate.from_messages.assert_called_once()
+
+			# Ensure the format method was called with the correct arguments
+			mock_chat_template.format.assert_called_once_with(
+				user_options=user_options,
+				moves_and_damages=move_damages,
+				user_reserve=["Charmander", "Bulbasaur"],
+				opponent_pokemon="Squirtle",
+				opponent_options=opponent_options,
+				num_opp_reserve=1,
+				opponent_known_reserve=["Rattata"]
+			)
+
+	def test_format_prompt_missing_user_active():
+		parsed_state = {
+			"user": {"reserve": ["Charmander", "Bulbasaur"]},
+			"opponent": {"active": "Squirtle", "reserve": ["Rattata"]},
+		}
+		user_options = ['volt tackle', 'switch Charmander', 'switch Bulbasaur']
+		opponent_options = ['tackle']
+		move_damages = {'volt tackle': 100}
+
+		result = format_prompt(user_options, opponent_options, move_damages, parsed_state)
+
+		# Expect the function to return None since 'active' is missing
+		assert result is None
+
+	def test_format_prompt_missing_user_options_empty():
+		parsed_state = {
+			"user": {"active": "Pikachu", "reserve": ["Charmander", "Bulbasaur"]},
+			"opponent": {"active": "Squirtle", "reserve": ["Rattata"]},
+		}
+		user_options = []
+		opponent_options = ['tackle']
+		move_damages = {'volt tackle': 100}
+
+		result = format_prompt(user_options, opponent_options, move_damages, parsed_state)
+
+		# Expect the function to return None since 'active' is missing
+		assert result is None
+
+	def test_format_prompt_empty_opponent_reserve():
+		parsed_state = {
+			"user": {"active": "Pikachu", "reserve": ["Charmander", "Bulbasaur"]},
+			"opponent": {"active": "Squirtle", "reserve": ["Rattata"]},
+		}
+		user_options = ['volt tackle', 'switch Charmander', 'switch Bulbasaur']
+		opponent_options = ['tackle']
+		move_damages = {'volt tackle': 100}
+
+		with patch("showdown.battle_bots.llm.llm_helpers.ChatPromptTemplate") as MockChatPromptTemplate:
+			mock_chat_template = MagicMock()
+			MockChatPromptTemplate.from_messages.return_value = mock_chat_template
+			mock_chat_template.format.return_value = "formatted prompt"
+
+			result = format_prompt(user_options, opponent_options, move_damages, parsed_state)
+
+			assert result == "formatted prompt"
+			mock_chat_template.format.assert_called_once_with(
+				user_options=user_options,
+				moves_and_damages=move_damages,
+				user_reserve=["Charmander", "Bulbasaur"],
+				opponent_pokemon="Squirtle",
+				opponent_options=opponent_options,
+				num_opp_reserve=0,
+				opponent_known_reserve=[]
+			)

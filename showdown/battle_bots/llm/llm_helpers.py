@@ -1,7 +1,6 @@
 from langchain_core.messages import SystemMessage
 from langchain_core.prompts import HumanMessagePromptTemplate, ChatPromptTemplate, SystemMessagePromptTemplate
 
-
 """
 FUTURE BOT IMPROVEMENTS:
 - implement memory of the user's playstyle and use it to make decisions
@@ -68,6 +67,9 @@ def format_prompt(user_options: list[str], opponent_options: list[str], move_dam
 		]
 	)
 
+	if not user_options:
+		return None
+	
 	trainer_reserve = []
 	trainer_active = None
 

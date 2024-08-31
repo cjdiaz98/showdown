@@ -447,8 +447,6 @@ class Battler:
         }
 
     def __repr__(self):
-        # battler_dict = self.to_dict()
-        # battler_dict[constants.SIDE_CONDITIONS] = list(battler_dict[constants.SIDE_CONDITIONS])
         return str(self.to_dict())
         # return json.dumps(battler_dict, indent=2)
 
