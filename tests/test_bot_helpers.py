@@ -2,7 +2,7 @@ import unittest
 
 import constants
 from showdown.battle import Battle
-from showdown.battle_bots.helpers import format_decision
+from showdown.battle_bots.helpers import format_decision, get_non_fainted_pokemon_in_reserve, count_fainted_pokemon_in_reserve
 from showdown.battle_bots.safest.main import BattleBot as SafestBattleBot
 from showdown.engine.objects import Pokemon, Side, State
 import json
@@ -247,3 +247,128 @@ class TestFormatResponse(unittest.TestCase):
 		# Assert that the decision message does not include Terastallize
 		expected_message = f"/choose move {move_name}"
 		self.assertEqual(result, [expected_message, str(self.safest_battlebot.rqid)])
+
+from showdown.battle import Pokemon as StatePokemon
+from collections import defaultdict
+
+class TestGetNonFaintedPokemonInReserve(unittest.TestCase):
+	def setUp(self):
+		self.maxDiff = None
+		self.side = Side(
+			Pokemon.from_state_pokemon_dict(StatePokemon("raichu", 73).to_dict()),
+			{
+				"xatu": Pokemon.from_state_pokemon_dict(StatePokemon("xatu", 81).to_dict()),
+				"starmie": Pokemon.from_state_pokemon_dict(StatePokemon("starmie", 81).to_dict()),
+				"gyarados": Pokemon.from_state_pokemon_dict(StatePokemon("gyarados", 81).to_dict()),
+				"dragonite": Pokemon.from_state_pokemon_dict(StatePokemon("dragonite", 81).to_dict()),
+				"hitmonlee": Pokemon.from_state_pokemon_dict(StatePokemon("hitmonlee", 81).to_dict()),
+			},
+			(0, 0),
+			defaultdict(lambda: 0),
+			(0, 0)
+		)
+
+	def test_all_pokemon_fainted(self):
+		for mon in self.side.reserve.values():
+			mon.hp = 0
+		expected_out = {}
+		non_fainted_out = get_non_fainted_pokemon_in_reserve(self.side.reserve)
+		self.assertEqual(expected_out, non_fainted_out)
+
+	def test_no_pokemon_fainted(self):
+		# All Pokémon have non-zero HP
+		expected_out = self.side.reserve
+		non_fainted_out = get_non_fainted_pokemon_in_reserve(self.side.reserve)
+		self.assertEqual(expected_out, non_fainted_out)
+
+	def test_some_pokemon_fainted(self):
+		# Faint some Pokémon
+		self.side.reserve["starmie"].hp = 0
+		self.side.reserve["gyarados"].hp = 0
+		
+		expected_out = {
+			"xatu": self.side.reserve["xatu"],
+			"dragonite": self.side.reserve["dragonite"],
+			"hitmonlee": self.side.reserve["hitmonlee"]
+		}
+		non_fainted_out = get_non_fainted_pokemon_in_reserve(self.side.reserve)
+		self.assertEqual(expected_out, non_fainted_out)
+
+	def test_empty_reserve(self):
+		# Reserve is empty
+		self.side.reserve = {}
+		expected_out = {}
+		non_fainted_out = get_non_fainted_pokemon_in_reserve(self.side.reserve)
+		self.assertEqual(expected_out, non_fainted_out)
+
+	def test_single_non_fainted_pokemon(self):
+		# Only one Pokémon in reserve and it's non-fainted
+		self.side.reserve = {
+			"dragonite": Pokemon.from_state_pokemon_dict(StatePokemon("dragonite", 81).to_dict())
+		}
+		expected_out = self.side.reserve
+		non_fainted_out = get_non_fainted_pokemon_in_reserve(self.side.reserve)
+		self.assertEqual(expected_out, non_fainted_out)
+
+	def test_single_fainted_pokemon(self):
+		# Only one Pokémon in reserve and it's fainted
+		self.side.reserve = {
+			"dragonite": Pokemon.from_state_pokemon_dict(StatePokemon("dragonite", 81).to_dict())
+		}
+		self.side.reserve["dragonite"].hp = 0
+		expected_out = {}
+		non_fainted_out = get_non_fainted_pokemon_in_reserve(self.side.reserve)
+		self.assertEqual(expected_out, non_fainted_out)
+
+import unittest
+
+class TestCountFaintedPokemonInReserve(unittest.TestCase):
+	def setUp(self):
+		self.reserve = {
+			"xatu": StatePokemon("xatu", 81),
+			"starmie": StatePokemon("starmie", 81),
+			"gyarados": StatePokemon("gyarados", 81),
+			"dragonite": StatePokemon("dragonite", 81),
+			"hitmonlee": StatePokemon("hitmonlee", 81),
+		}
+
+	def test_all_pokemon_fainted(self):
+		for mon in self.reserve.values():
+			mon.hp = 0
+		fainted_count = count_fainted_pokemon_in_reserve(self.reserve)
+		self.assertEqual(fainted_count, len(self.reserve))  # Expect all Pokémon to be fainted
+
+	def test_no_pokemon_fainted(self):
+		for mon in self.reserve.values():
+			mon.hp = 81  # All Pokémon have non-zero HP
+		fainted_count = count_fainted_pokemon_in_reserve(self.reserve)
+		self.assertEqual(fainted_count, 0)  # Expect no Pokémon to be fainted
+
+	def test_some_pokemon_fainted(self):
+		# Faint two Pokémon in the reserve
+		self.reserve["starmie"].hp = 0
+		self.reserve["gyarados"].hp = 0
+		
+		fainted_count = count_fainted_pokemon_in_reserve(self.reserve)
+		self.assertEqual(fainted_count, 2)  # Expect 2 Pokémon to be fainted
+
+	def test_empty_reserve(self):
+		empty_reserve = {}
+		fainted_count = count_fainted_pokemon_in_reserve(empty_reserve)
+		self.assertEqual(fainted_count, 0)  # Expect 0 fainted Pokémon in an empty reserve
+
+	def test_single_fainted_pokemon(self):
+		single_reserve = {
+			"dragonite": StatePokemon("dragonite", 81)
+		}
+		single_reserve["dragonite"].hp = 0
+		fainted_count = count_fainted_pokemon_in_reserve(single_reserve)
+		self.assertEqual(fainted_count, 1)  # Expect 1 fainted Pokémon
+
+	def test_single_non_fainted_pokemon(self):
+		single_reserve = {
+			"dragonite": StatePokemon("dragonite", 81)
+		}
+		fainted_count = count_fainted_pokemon_in_reserve(single_reserve)
+		self.assertEqual(fainted_count, 0)  # Expect 0 fainted Pokémon
+

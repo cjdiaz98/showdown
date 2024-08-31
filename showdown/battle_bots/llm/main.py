@@ -11,7 +11,7 @@ from pprint import pprint
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import OpenAI
 from config import ShowdownConfig
-from showdown.battle_bots.llm.llm_helpers import format_prompt
+from showdown.battle_bots.llm.llm_helpers import format_prompt, parse_llm_output
 
 class BattleBot(Battle):
 	def __init__(self, *args, **kwargs):
@@ -24,34 +24,23 @@ class BattleBot(Battle):
 			)
 
 	def find_best_move(self):
-		state = self.create_state()
-		# pprint(state.user.reserve)
-		state_parsed = parse_state(state)
-		opponent_pokemon = state.opponent.active
-		user_pokemon = state.user.active
-		opponent_reserve = state.opponent.reserve
-		user_reserve = state.user.reserve
+		prompt = self.get_prompt_with_battle_context()
+		# print("PROMPT \n" + prompt)
+		llm_response = self.llm.invoke(prompt)
+		parse_output = parse_llm_output(llm_response)
+		# to do: See if we want to list a stop sequence such as "END"
 
-		# terrain = state. # not implemented in base code
-		my_options, opponent_options = self.get_all_options()
-		print("my options: ", my_options)
-		print("opponent options: ", opponent_options)
+		if not parse_output:
+			return None
+		
+		# if self.force_switch or not moves: # How do we handle a forced switch?
+		decision = format_decision(self, parse_output[0])
 
-		move_damages = self.get_move_damages(state)
-		print("move damages: ", move_damages)
-		pprint("state_parsed: " + str(state_parsed))
-		# to do: if pokemon is choiced, we have to pick only one move
-		# to do: get weaknesses of opponent and our pokemon 
-		# to do: get opponent speed range and compare to ours
-		moves = [] # to do: get move accuracy, power, and type
-		# to do: get move priority
-		# to do: implement bots monologuing to their opponent. Then we can actually implement bots that talk back to the opponent
-		prompt = format_prompt(my_options, opponent_options, move_damages, state_parsed)
+		if len(parse_output) > 1 and not constants.TERASTALLIZE in parse_output[0] and parse_output[1].lower().startsWith(constants.TERASTALLIZE):
+			# format decision to have tera if the LLM decided it and not already present
+			decision[0] = decision[0] + " " + constants.TERASTALLIZE
 
-		# if self.force_switch or not moves:
-			# return format_decision(self, switches[0])
-		return None
-		# return format_decision(self, choice)
+		return decision
 
 	def get_all_switch_options(self):
 		return [action for action in self.get_all_options() if action.startswith(constants.SWITCH_STRING + " ")]
@@ -76,12 +65,28 @@ class BattleBot(Battle):
 			move_name = move[constants.ID]
 			move_damage = _calculate_damage(attacker, opponent, move_name, conditions)
 			move_damages[move_name] = move_damage
-			if move_damage and len(move_damage) > 1:
+			if move_damage and len(move_damage) >= 1:
 				move_damages[move_name] = move_damage[0] # just get a single number
+			
 		return move_damages
 
+	def get_prompt_with_battle_context(self) -> str:
+		state = self.create_state()
+		state_parsed = parse_state(state)
 
+		my_options, opponent_options = self.get_all_options()
+		print("my options: ", my_options)
+		print("opponent options: ", opponent_options)
 
+		move_damages = self.get_move_damages(state) # to do: get move accuracy and priority too
+		print("move damages: ", move_damages)
+		pprint("state_parsed: " + str(state_parsed))
+		# to do: if pokemon is choiced, we have to pick only one move
+		# to do: get opponent speed range and compare to ours
+
+		# to do: implement bots monologuing to their opponent. Then we can actually implement bots that talk back to the opponent
+		return format_prompt(my_options, opponent_options, move_damages, state_parsed)
+		
 
 
 

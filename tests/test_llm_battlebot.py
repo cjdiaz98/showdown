@@ -12,7 +12,6 @@ import pprint
 from config import ShowdownConfig
 from unittest.mock import patch, MagicMock
 
-@unittest.skip("not implemented")
 class TestLLMBattleBot(unittest.TestCase):
 	user_json = """{
 		"active": [
@@ -541,17 +540,19 @@ class TestLLMBattleBot(unittest.TestCase):
 	def test_no_remaining_pp(self):
 		pass
 
-	@unittest.skip("Not implemented")
+	# @unittest.skip("Not implemented")
 	def test_find_best_move_llm_battle_bot(self):
-		best_move = self.llm_battlebot.find_best_move()
-		self.assertEqual(2, len(best_move))
-		self.assertTrue("hydropump" in best_move[0])
+		prompt = self.llm_battlebot.get_prompt_with_battle_context()
+		print("PROMPT\n" + prompt)
+		# best_move = self.llm_battlebot.find_best_move()
+		# self.assertEqual(2, len(best_move))
+		# self.assertTrue("hydropump" in best_move[0])
 
 	@unittest.skip("Not implemented")
 	def test_find_best_move_llm_battle_bot_user_is_choiced(self):
 		pass
 
-	# @unittest.skip("Not implemented")
+	@unittest.skip("Not implemented")
 	def test_find_best_move_llm_battle_bot_should_switch(self):
 		llm_battlebot_should_switch = LLMBattleBot(self.battle_tag)
 		self.set_battle_gen_and_type(llm_battlebot_should_switch)
@@ -572,7 +573,7 @@ class TestParseLLMOutput(unittest.TestCase):
         llm_out = """CHOICE:
             'move Dragon Ascent'"""
         parsed_out = parse_llm_output(llm_out)
-        expected_out = "move Dragon Ascent"
+        expected_out = ["move Dragon Ascent"]
         self.assertEqual(expected_out, parsed_out)
 
     def test_parse_output_valid_move_with_other_noise(self):
@@ -580,15 +581,15 @@ class TestParseLLMOutput(unittest.TestCase):
             'move Dragon Ascent'
             Make sure we can tune out some other gibberish here."""
         parsed_out = parse_llm_output(llm_out)
-        expected_out = "move Dragon Ascent"
+        expected_out = ["move Dragon Ascent"]
         self.assertEqual(expected_out, parsed_out)
 
     def test_parse_output_valid_move_and_tera(self):
         llm_out = """CHOICE:
-            'move Dragon Ascent'\n
+            'move Dragon Ascent'
             'terastallize Flying'"""
         parsed_out = parse_llm_output(llm_out)
-        expected_out = "move Dragon Ascent\nterastallize Flying"
+        expected_out = ["move Dragon Ascent", "terastallize Flying"]
         self.assertEqual(expected_out, parsed_out)
 
     def test_parse_output_multiple_times_picks_first_match(self):
@@ -597,7 +598,7 @@ class TestParseLLMOutput(unittest.TestCase):
             CHOICE:
             'move Tackle'"""
         parsed_out = parse_llm_output(llm_out)
-        expected_out = "move Dragon Ascent"
+        expected_out = ["move Dragon Ascent"]
         self.assertEqual(expected_out, parsed_out)
 
     def test_parse_move_and_switch_only_takes_move(self):
@@ -606,7 +607,7 @@ class TestParseLLMOutput(unittest.TestCase):
             CHOICE:
             'switch Pikachu'"""
         parsed_out = parse_llm_output(llm_out)
-        expected_out = "move Dragon Ascent"
+        expected_out = ["move Dragon Ascent"]
         self.assertEqual(expected_out, parsed_out)
 
     def test_parse_output_no_specified_move_should_fail(self):
@@ -625,19 +626,19 @@ class TestParseLLMOutput(unittest.TestCase):
     def test_parse_output_valid_switch(self):
         llm_out = """CHOICE: 'switch Kyogre'"""
         parsed_out = parse_llm_output(llm_out)
-        expected_out = "switch Kyogre"
+        expected_out = ["switch Kyogre"]
         self.assertEqual(expected_out, parsed_out)
 
     def test_parse_output_excess_whitespace_succeeds(self):
         llm_out = "CHOICE: \n\n'switch Kyogre'    "
         parsed_out = parse_llm_output(llm_out)
-        expected_out = "switch Kyogre"
+        expected_out = ["switch Kyogre"]
         self.assertEqual(expected_out, parsed_out)
 
     def test_parse_output_no_whitespace_succeeds(self):
         llm_out = "CHOICE:'switch Kyogre'"
         parsed_out = parse_llm_output(llm_out)
-        expected_out = "switch Kyogre"
+        expected_out = ["switch Kyogre"]
         self.assertEqual(expected_out, parsed_out)
 
     def test_parse_output_switch_with_no_specified_target_should_fail(self):
@@ -650,9 +651,9 @@ class TestParseLLMOutput(unittest.TestCase):
     def test_parse_output_tera_with_switch_should_not_register(self):
         llm_out = """CHOICE:
             'switch Kyogre'
-			'tera Flying'"""
+            'terastallize Flying'"""
         parsed_out = parse_llm_output(llm_out)
-        expected_out = "switch Kyogre"
+        expected_out = ["switch Kyogre"]
         self.assertEqual(expected_out, parsed_out)
 
     def test_parse_output_invalid_response_format_should_fail(self):

@@ -481,32 +481,36 @@ def parse_pokemon_old(pokemon: Pokemon) -> dict:
 	return parsed_dict
 
 def parse_pokemon(pokemon: TransposePokemon) -> dict:
-    # Create a dictionary representing the key attributes of the TransposePokemon instance
-    parsed_dict = {
-        'id': pokemon.id,
-        'level': pokemon.level,
-        'types': pokemon.types,
-        'current_hp_percentage': (pokemon.hp / pokemon.maxhp) * 100,
-        'ability': pokemon.ability,
-        'item': pokemon.item,
-        'attack': pokemon.attack,
-        'defense': pokemon.defense,
-        'special-attack': pokemon.special_attack,
-        'special-defense': pokemon.special_defense,
-        'speed': pokemon.speed,
-        'attack_boost': pokemon.attack_boost,
-        'defense_boost': pokemon.defense_boost,
-        'special_attack_boost': pokemon.special_attack_boost,
-        'special_defense_boost': pokemon.special_defense_boost,
-        'speed_boost': pokemon.speed_boost,
-        'accuracy_boost': pokemon.accuracy_boost,
-        'evasion_boost': pokemon.evasion_boost,
-        'status': pokemon.status,
-        'terastallized': pokemon.terastallized,
-        'volatileStatus': list(pokemon.volatile_status),
-        'moves': pokemon.moves
-    }
-    return parsed_dict
+	# Create a dictionary representing the key attributes of the TransposePokemon instance
+	moves = [constants.UNKNOWN] * 4
+	for i in range(len(pokemon.moves)):
+		moves[i] = pokemon.moves[i]
+
+	parsed_dict = {
+		'id': pokemon.id,
+		'level': pokemon.level,
+		'types': pokemon.types,
+		'current_hp_percentage': (pokemon.hp / pokemon.maxhp) * 100,
+		'ability': pokemon.ability if pokemon.ability else constants.UNKNOWN_ABILITY,
+		'item': pokemon.item if pokemon.item else constants.UNKNOWN_ITEM,
+		'attack': pokemon.attack,
+		'defense': pokemon.defense,
+		'special-attack': pokemon.special_attack,
+		'special-defense': pokemon.special_defense,
+		'speed': pokemon.speed,
+		'attack_boost': pokemon.attack_boost,
+		'defense_boost': pokemon.defense_boost,
+		'special_attack_boost': pokemon.special_attack_boost,
+		'special_defense_boost': pokemon.special_defense_boost,
+		'speed_boost': pokemon.speed_boost,
+		'accuracy_boost': pokemon.accuracy_boost,
+		'evasion_boost': pokemon.evasion_boost,
+		'status': pokemon.status,
+		'terastallized': pokemon.terastallized,
+		'volatileStatus': list(pokemon.volatile_status),
+		'moves': moves
+	}
+	return parsed_dict
 
 def parse_side(side: Side) -> dict:
 	parsed_dict = {
@@ -519,29 +523,29 @@ def parse_side(side: Side) -> dict:
 	return parsed_dict
 
 def parse_state(state: State) -> dict[str, any]:
-    return {
-        "self": parse_side(state.user),
-        "opponent": parse_side(state.opponent),
-        constants.WEATHER: state.weather,
-        constants.FIELD: state.field,
-        constants.TRICK_ROOM: state.trick_room
-    }
+	return {
+		"self": parse_side(state.user),
+		"opponent": parse_side(state.opponent),
+		constants.WEATHER: state.weather,
+		constants.FIELD: state.field,
+		constants.TRICK_ROOM: state.trick_room
+	}
 
 def parse_move_data(move_info: dict[str, any]) -> dict[str, any]:
-    attributes_to_copy = ['id', 'accuracy', 'basePower', 'category', 'priority', 'target', 'type']
-    
-    parsed_move_data = {attr: move_info[attr] for attr in attributes_to_copy if attr in move_info}
-    parsed_move_data['name'] = parsed_move_data.pop('id').lower()
+	attributes_to_copy = ['id', 'accuracy', 'basePower', 'category', 'priority', 'target', 'type']
+	
+	parsed_move_data = {attr: move_info[attr] for attr in attributes_to_copy if attr in move_info}
+	parsed_move_data['name'] = parsed_move_data.pop('id').lower()
 
-    # Add boosts if present
-    if 'boosts' in move_info:
-        parsed_move_data['boosts'] = move_info['boosts']
+	# Add boosts if present
+	if 'boosts' in move_info:
+		parsed_move_data['boosts'] = move_info['boosts']
 
-    # Add status condition if present
-    if 'status' in move_info:
-        parsed_move_data['status'] = move_info['status']
-    
-    return parsed_move_data
+	# Add status condition if present
+	if 'status' in move_info:
+		parsed_move_data['status'] = move_info['status']
+	
+	return parsed_move_data
 
 import re 
 

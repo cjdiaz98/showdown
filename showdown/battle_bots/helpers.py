@@ -8,11 +8,12 @@ from showdown.engine.select_best_move import pick_safest
 from showdown.engine.select_best_move import get_payoff_matrix
 from showdown.battle import Battle, Side
 from data import all_move_json
+from showdown.engine.objects import Pokemon as StatePokemon
 
 logger = logging.getLogger(__name__)
 
 
-def format_decision(battle, decision):
+def format_decision(battle: Battle, decision: str) -> list[str]:
     # Formats a decision for communication with Pokemon-Showdown
     # If the pokemon can mega-evolve, it will
     # If the move can be used as a Z-Move, it will be
@@ -140,3 +141,26 @@ def get_battle_conditions(battle: Battle, side: Side) -> dict[str, bool]:
 def get_move_relevant_data(move: str) -> dict:
     move_data = all_move_json.get(move)
     return move_data
+
+def get_non_fainted_pokemon_in_reserve(reserve: dict[str, StatePokemon]) -> dict[str, StatePokemon]:
+    new_dict = {}
+    for mon in reserve:
+        if reserve[mon].hp != 0:
+            new_dict[mon] = reserve[mon]
+    return new_dict
+
+def count_fainted_pokemon_in_reserve(reserve: dict[str, StatePokemon]) -> int:
+    """
+    Counts the number of fainted Pokémon in the reserve.
+    
+    Args:
+        reserve (dict): A dictionary where the keys are Pokémon names and the values are StatePokemon objects.
+    
+    Returns:
+        int: The number of fainted Pokémon in the reserve.
+    """
+    fainted_count = 0
+    for mon in reserve.values():
+        if mon.hp == 0:
+            fainted_count += 1
+    return fainted_count

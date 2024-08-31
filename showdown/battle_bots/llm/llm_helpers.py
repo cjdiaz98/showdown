@@ -1,5 +1,7 @@
 from langchain_core.messages import SystemMessage
 from langchain_core.prompts import HumanMessagePromptTemplate, ChatPromptTemplate, SystemMessagePromptTemplate
+import constants
+from showdown.battle_bots.helpers import count_fainted_pokemon_in_reserve
 
 """
 FUTURE BOT IMPROVEMENTS:
@@ -28,10 +30,10 @@ Your opponent's known reserve pokemon.
 To designate your choice, put\n
 CHOICE:
 '<Option>'\n
-Where <Option> is one of the following:\n
-If you choose to use a move, you must output:\n
+Where <Option> is one of the following:
+If you choose to use a move, output:
 move <MOVE NAME>.
-If you choose to switch pokemon, output:\n
+If you choose to switch pokemon, output:
 switch <POKEMON TO SWITCH>.""" # To do 
 TERA_SYSTEM_INSTRUCTIONS = """If your current pokemon can terastallize, and you want to do that you can output:\n
 terastallize <TERA TYPE>"""
@@ -72,19 +74,22 @@ def format_prompt(user_options: list[str], opponent_options: list[str], move_dam
 	)
 
 	if not user_options:
+		print("no user options")
 		return None
 	
 	trainer_reserve = []
 	trainer_active = None
-
-	if "user" in parsed_state:
-		trainer_active = parsed_state["user"].get("active")
-		trainer_reserve = parsed_state["user"].get("reserve")
+	
+	if constants.SELF in parsed_state:
+		trainer_active = parsed_state[constants.SELF].get("active")
+		trainer_reserve = parsed_state[constants.SELF].get("reserve")
 		
 	if not trainer_active:
+		print("no trainer active")
 		return None # If we are somehow missing the user context there's really not much we can do
 	
-	num_opp_reserve = 0
+	num_opp_reserve = constants.RANBATS_NUMBER_OF_SLOTS - 1 # to do: change to account for different battle type
+
 	opponent_known_reserve = []
 	opponent_active = None
 
@@ -92,8 +97,8 @@ def format_prompt(user_options: list[str], opponent_options: list[str], move_dam
 		opponent_active = parsed_state["opponent"].get("active")
 
 		reserve = parsed_state["opponent"].get("reserve")
+		num_opp_reserve -= count_fainted_pokemon_in_reserve(reserve)
 		if reserve:
-			num_opp_reserve = len(reserve)
 			opponent_known_reserve = reserve
 
 	return chat_template.format(user_options=user_options,
@@ -135,7 +140,7 @@ def parse_llm_output2(llm_output: str):
 
 import re
 
-def parse_llm_output(llm_output: str):
+def parse_llm_output(llm_output: str) -> list[str]:
 	"""
 	Parses the LLM output to extract a valid move or switch command, optionally including terastallize if there is a move command.
 	
@@ -172,4 +177,4 @@ def parse_llm_output(llm_output: str):
 		commands.append(switch_command)
 
 	# Return the commands joined by newlines, or None if no valid commands were found
-	return "\n".join(commands) if commands else None
+	return commands if commands else None

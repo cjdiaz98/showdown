@@ -29,6 +29,8 @@ COUNT = "count"
 SETS = "sets"
 
 UNKNOWN_ITEM = "unknown_item"
+UNKNOWN_ABILITY = "unknown ability"
+UNKNOWN = "unknown"
 
 UNKOWN_POKEMON_FORMES = ['silvally', 'arceus', 'genesect', 'urshifu']
 
@@ -478,3 +480,5 @@ class MoveCategory(Enum):
     PHYSICAL = "physical"
     SPECIAL = "special"
     STATUS = "status"
+
+RANBATS_NUMBER_OF_SLOTS = 6
