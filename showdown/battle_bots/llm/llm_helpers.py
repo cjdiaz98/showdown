@@ -25,12 +25,16 @@ Your pokemon's moves and their projected damages.
 Your opponent's active pokemon. 
 Your opponent's known reserve pokemon.
 
+To designate your choice, put\n
+CHOICE:
+'<Option>'\n
+Where <Option> is one of the following:\n
 If you choose to use a move, you must output:\n
 move <MOVE NAME>.
 If you choose to switch pokemon, output:\n
 switch <POKEMON TO SWITCH>.""" # To do 
 TERA_SYSTEM_INSTRUCTIONS = """If your current pokemon can terastallize, and you want to do that you can output:\n
-terastallize <POKEMON NAME>"""
+terastallize <TERA TYPE>"""
 
 # note: Add the below when you want to give the bot dialogue options
 """In addition to which choice you want to make, you will also provide some dialogue commentating on the battle and why you made the choice you did."""
@@ -100,6 +104,72 @@ def format_prompt(user_options: list[str], opponent_options: list[str], move_dam
 							 num_opp_reserve=num_opp_reserve,
 							 opponent_known_reserve=opponent_known_reserve)
 
-def parse_decision(llm_output: str):
-	# to do: parse the decision from the LLM output
-	return llm_output
+import re
+
+def parse_llm_output2(llm_output: str):
+	"""
+	Parses the LLM output to extract valid move, switch, and terastallize commands, removing any single quotes.
+	
+	Args:
+		llm_output (str): The output from the LLM.
+
+	Returns:
+		str: The parsed commands if valid, otherwise None.
+	"""
+	# Use a regular expression to find all valid commands within the first "CHOICE:" block
+	matches = re.findall(r"CHOICE:\s*'(.*?)'", llm_output, re.IGNORECASE | re.DOTALL)
+
+	# Filter out and process the captured commands
+	commands = []
+	for match in matches:
+		command = match.strip()
+		if command.startswith("move") and len(command.split()) > 1:
+			commands.append(command)
+		elif command.startswith("switch") and len(command.split()) > 1:
+			commands.append(command)
+		elif command.startswith("terastallize") and len(command.split()) > 1:
+			commands.append(command)
+
+	# Return the commands joined by newlines, or None if no valid commands were found
+	return "\n".join(commands) if commands else None
+
+import re
+
+def parse_llm_output(llm_output: str):
+	"""
+	Parses the LLM output to extract a valid move or switch command, optionally including terastallize if there is a move command.
+	
+	Args:
+		llm_output (str): The output from the LLM.
+
+	Returns:
+		str: The parsed command(s) if valid, otherwise None.
+	"""
+	# Use regular expressions to match the commands
+	move_match = re.search(r"CHOICE:\s*'move\s+\w+(?:\s+\w+)*'", llm_output, re.IGNORECASE)
+	switch_match = re.search(r"CHOICE:\s*'switch\s+\w+(?:\s+\w+)*'", llm_output, re.IGNORECASE)
+	tera_match = re.search(r"\s*'terastallize\s+\w+(?:\s+\w+)*'", llm_output, re.IGNORECASE)
+
+	# If neither move nor switch command is found, return None (invalid)
+	if not move_match and not switch_match:
+		return None
+
+	commands = []
+	
+	# If a move command is found, add it to the result
+	if move_match:
+		move_command = move_match.group(0).split("'")[1].strip()
+		commands.append(move_command)
+		
+		# If a terastallize command is also found, add it to the result
+		if tera_match:
+			tera_command = tera_match.group(0).split("'")[1].strip()
+			commands.append(tera_command)
+	
+	# If only a switch command is found, add it to the result
+	elif switch_match:
+		switch_command = switch_match.group(0).split("'")[1].strip()
+		commands.append(switch_command)
+
+	# Return the commands joined by newlines, or None if no valid commands were found
+	return "\n".join(commands) if commands else None

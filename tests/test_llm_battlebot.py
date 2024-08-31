@@ -4,7 +4,7 @@ from collections import defaultdict
 import constants
 from showdown.battle import Battle
 from showdown.battle_bots.llm.main import BattleBot as LLMBattleBot
-from showdown.battle_bots.llm.llm_helpers import format_prompt
+from showdown.battle_bots.llm.llm_helpers import format_prompt, parse_llm_output
 from showdown.battle_bots.safest.main import BattleBot as SafestBattleBot
 from showdown.engine.objects import Pokemon, Side, State
 import json
@@ -567,19 +567,99 @@ class TestLLMBattleBot(unittest.TestCase):
 		battle.generation = self.mode[:4]
 		battle.battle_type = constants.RANDOM_BATTLE
 
-@unittest.skip("not implemented")
-class TestLLMBotHelpers(unittest.TestLoader):
-	def test_parse_output_valid_move(self):
-		pass
+class TestParseLLMOutput(unittest.TestCase):
+    def test_parse_output_valid_move(self):
+        llm_out = """CHOICE:
+            'move Dragon Ascent'"""
+        parsed_out = parse_llm_output(llm_out)
+        expected_out = "move Dragon Ascent"
+        self.assertEqual(expected_out, parsed_out)
 
-	def test_parse_output_valid_switch(self):
-		pass
+    def test_parse_output_valid_move_with_other_noise(self):
+        llm_out = """LLM puts some preamble about its CHOICE:
+            'move Dragon Ascent'
+            Make sure we can tune out some other gibberish here."""
+        parsed_out = parse_llm_output(llm_out)
+        expected_out = "move Dragon Ascent"
+        self.assertEqual(expected_out, parsed_out)
 
-	def test_parse_output_invalid_move(self):
-		pass
+    def test_parse_output_valid_move_and_tera(self):
+        llm_out = """CHOICE:
+            'move Dragon Ascent'\n
+            'terastallize Flying'"""
+        parsed_out = parse_llm_output(llm_out)
+        expected_out = "move Dragon Ascent\nterastallize Flying"
+        self.assertEqual(expected_out, parsed_out)
 
-	def test_parse_output_invalid_response_format(self):
-		pass
+    def test_parse_output_multiple_times_picks_first_match(self):
+        llm_out = """CHOICE:
+            'move Dragon Ascent'
+            CHOICE:
+            'move Tackle'"""
+        parsed_out = parse_llm_output(llm_out)
+        expected_out = "move Dragon Ascent"
+        self.assertEqual(expected_out, parsed_out)
+
+    def test_parse_move_and_switch_only_takes_move(self):
+        llm_out = """CHOICE:
+            'move Dragon Ascent'
+            CHOICE:
+            'switch Pikachu'"""
+        parsed_out = parse_llm_output(llm_out)
+        expected_out = "move Dragon Ascent"
+        self.assertEqual(expected_out, parsed_out)
+
+    def test_parse_output_no_specified_move_should_fail(self):
+        llm_out = """CHOICE:
+            'move'"""
+        parsed_out = parse_llm_output(llm_out)
+        expected_out = None
+        self.assertEqual(expected_out, parsed_out)
+
+    def test_parse_output_empty_string_should_fail(self):
+        llm_out = ""
+        parsed_out = parse_llm_output(llm_out)
+        expected_out = None
+        self.assertEqual(expected_out, parsed_out)
+
+    def test_parse_output_valid_switch(self):
+        llm_out = """CHOICE: 'switch Kyogre'"""
+        parsed_out = parse_llm_output(llm_out)
+        expected_out = "switch Kyogre"
+        self.assertEqual(expected_out, parsed_out)
+
+    def test_parse_output_excess_whitespace_succeeds(self):
+        llm_out = "CHOICE: \n\n'switch Kyogre'    "
+        parsed_out = parse_llm_output(llm_out)
+        expected_out = "switch Kyogre"
+        self.assertEqual(expected_out, parsed_out)
+
+    def test_parse_output_no_whitespace_succeeds(self):
+        llm_out = "CHOICE:'switch Kyogre'"
+        parsed_out = parse_llm_output(llm_out)
+        expected_out = "switch Kyogre"
+        self.assertEqual(expected_out, parsed_out)
+
+    def test_parse_output_switch_with_no_specified_target_should_fail(self):
+        llm_out = """CHOICE:
+            'switch'"""
+        parsed_out = parse_llm_output(llm_out)
+        expected_out = None
+        self.assertEqual(expected_out, parsed_out)
+
+    def test_parse_output_tera_with_switch_should_not_register(self):
+        llm_out = """CHOICE:
+            'switch Kyogre'
+			'tera Flying'"""
+        parsed_out = parse_llm_output(llm_out)
+        expected_out = "switch Kyogre"
+        self.assertEqual(expected_out, parsed_out)
+
+    def test_parse_output_invalid_response_format_should_fail(self):
+        llm_out = """not following the expected format at all"""
+        parsed_out = parse_llm_output(llm_out)
+        expected_out = None
+        self.assertEqual(expected_out, parsed_out)
 
 class TestLLMPromptFormatting(unittest.TestLoader):
 	# Test for a typical scenario
