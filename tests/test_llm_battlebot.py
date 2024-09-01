@@ -542,9 +542,9 @@ class TestLLMBattleBot(unittest.TestCase):
 
 	# @unittest.skip("Not implemented")
 	def test_find_best_move_llm_battle_bot(self):
-		prompt = self.llm_battlebot.get_prompt_with_battle_context()
-		print("PROMPT\n" + prompt)
-		# best_move = self.llm_battlebot.find_best_move()
+		# prompt = self.llm_battlebot.get_prompt_with_battle_context()
+		# print("PROMPT\n" + prompt)
+		best_move = self.llm_battlebot.find_best_move()
 		# self.assertEqual(2, len(best_move))
 		# self.assertTrue("hydropump" in best_move[0])
 
@@ -680,7 +680,7 @@ class TestLLMPromptFormatting(unittest.TestLoader):
 			mock_chat_template.format.return_value = "formatted prompt"
 
 			# Call the function
-			result = format_prompt(user_options, opponent_options, move_damages, parsed_state)
+			result = format_prompt(user_options, opponent_options, move_damages, parsed_state, 1)
 
 			# Check that the method returns the expected result
 			assert result == "formatted prompt"
@@ -708,7 +708,7 @@ class TestLLMPromptFormatting(unittest.TestLoader):
 		opponent_options = ['tackle']
 		move_damages = {'volt tackle': 100}
 
-		result = format_prompt(user_options, opponent_options, move_damages, parsed_state)
+		result = format_prompt(user_options, opponent_options, move_damages, parsed_state, 1)
 
 		# Expect the function to return None since 'active' is missing
 		assert result is None
@@ -730,7 +730,7 @@ class TestLLMPromptFormatting(unittest.TestLoader):
 	def test_format_prompt_empty_opponent_reserve():
 		parsed_state = {
 			"user": {"active": "Pikachu", "reserve": ["Charmander", "Bulbasaur"]},
-			"opponent": {"active": "Squirtle", "reserve": ["Rattata"]},
+			"opponent": {"active": "Squirtle", "reserve": []},
 		}
 		user_options = ['volt tackle', 'switch Charmander', 'switch Bulbasaur']
 		opponent_options = ['tackle']
@@ -741,7 +741,7 @@ class TestLLMPromptFormatting(unittest.TestLoader):
 			MockChatPromptTemplate.from_messages.return_value = mock_chat_template
 			mock_chat_template.format.return_value = "formatted prompt"
 
-			result = format_prompt(user_options, opponent_options, move_damages, parsed_state)
+			result = format_prompt(user_options, opponent_options, move_damages, parsed_state, 0)
 
 			assert result == "formatted prompt"
 			mock_chat_template.format.assert_called_once_with(

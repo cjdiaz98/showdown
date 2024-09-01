@@ -6,12 +6,13 @@ from showdown.engine.find_state_instructions import update_attacking_move
 from ..helpers import format_decision, get_battle_conditions
 from showdown.engine.damage_calculator import _calculate_damage
 from showdown.engine.objects import Pokemon
-from showdown.Commentary.parsingUtils import parse_pokemon, parse_side, parse_state, parse_move_data
+from showdown.Commentary.parsingUtils import parse_state
 from pprint import pprint
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import OpenAI
 from config import ShowdownConfig
 from showdown.battle_bots.llm.llm_helpers import format_prompt, parse_llm_output
+from showdown.battle_bots.helpers import count_fainted_pokemon_in_reserve
 
 class BattleBot(Battle):
 	def __init__(self, *args, **kwargs):
@@ -25,8 +26,9 @@ class BattleBot(Battle):
 
 	def find_best_move(self):
 		prompt = self.get_prompt_with_battle_context()
-		# print("PROMPT \n" + prompt)
+		print("PROMPT \n" + prompt)
 		llm_response = self.llm.invoke(prompt)
+		print("RESPONSE \n" + llm_response)
 		parse_output = parse_llm_output(llm_response)
 		# to do: See if we want to list a stop sequence such as "END"
 
@@ -75,17 +77,17 @@ class BattleBot(Battle):
 		state_parsed = parse_state(state)
 
 		my_options, opponent_options = self.get_all_options()
-		print("my options: ", my_options)
-		print("opponent options: ", opponent_options)
+		# print("my options: ", my_options)
+		# print("opponent options: ", opponent_options)
 
 		move_damages = self.get_move_damages(state) # to do: get move accuracy and priority too
-		print("move damages: ", move_damages)
-		pprint("state_parsed: " + str(state_parsed))
+		# print("move damages: ", move_damages)
+		# pprint("state_parsed: " + str(state_parsed))
 		# to do: if pokemon is choiced, we have to pick only one move
 		# to do: get opponent speed range and compare to ours
-
+		opponent_reserve_size = constants.RANBATS_NUMBER_OF_SLOTS - 1 - count_fainted_pokemon_in_reserve(state.opponent.reserve)
 		# to do: implement bots monologuing to their opponent. Then we can actually implement bots that talk back to the opponent
-		return format_prompt(my_options, opponent_options, move_damages, state_parsed)
+		return format_prompt(my_options, opponent_options, move_damages, state_parsed, opponent_reserve_size)
 		
 
 

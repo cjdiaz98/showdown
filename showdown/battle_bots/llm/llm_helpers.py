@@ -1,7 +1,6 @@
 from langchain_core.messages import SystemMessage
 from langchain_core.prompts import HumanMessagePromptTemplate, ChatPromptTemplate, SystemMessagePromptTemplate
 import constants
-from showdown.battle_bots.helpers import count_fainted_pokemon_in_reserve
 
 """
 FUTURE BOT IMPROVEMENTS:
@@ -29,12 +28,13 @@ Your opponent's known reserve pokemon.
 
 To designate your choice, put\n
 CHOICE:
-'<Option>'\n
+'<Option>'
 Where <Option> is one of the following:
 If you choose to use a move, output:
 move <MOVE NAME>.
 If you choose to switch pokemon, output:
 switch <POKEMON TO SWITCH>.""" # To do 
+
 TERA_SYSTEM_INSTRUCTIONS = """If your current pokemon can terastallize, and you want to do that you can output:\n
 terastallize <TERA TYPE>"""
 
@@ -57,7 +57,11 @@ MOVE_DAMAGES_PROMPT = "Your pokemon's moves, and their projected damages are: {m
 OPPONENT_INFORMATION_PROMPT = """Your opponent's active pokemon is: {opponent_pokemon}. Their known choice options are {opponent_options}.\n
 Your opponent has {num_opp_reserve} reserve pokemon. Of those, the following are known: {opponent_known_reserve}"""
 
-def format_prompt(user_options: list[str], opponent_options: list[str], move_damages: dict[str, float], parsed_state: dict[str, any]) -> str:
+def format_prompt(user_options: list[str],
+				  opponent_options: list[str],
+				  move_damages: dict[str, float],
+				  parsed_state: dict[str, any],
+				  opponent_reserve_size: int = 5) -> str:
 	""""""
 	chat_template = ChatPromptTemplate.from_messages(
 		[
@@ -88,8 +92,6 @@ def format_prompt(user_options: list[str], opponent_options: list[str], move_dam
 		print("no trainer active")
 		return None # If we are somehow missing the user context there's really not much we can do
 	
-	num_opp_reserve = constants.RANBATS_NUMBER_OF_SLOTS - 1 # to do: change to account for different battle type
-
 	opponent_known_reserve = []
 	opponent_active = None
 
@@ -97,7 +99,6 @@ def format_prompt(user_options: list[str], opponent_options: list[str], move_dam
 		opponent_active = parsed_state["opponent"].get("active")
 
 		reserve = parsed_state["opponent"].get("reserve")
-		num_opp_reserve -= count_fainted_pokemon_in_reserve(reserve)
 		if reserve:
 			opponent_known_reserve = reserve
 
@@ -106,7 +107,7 @@ def format_prompt(user_options: list[str], opponent_options: list[str], move_dam
 							 user_reserve = trainer_reserve,
 							 opponent_pokemon=opponent_active,
 							 opponent_options=opponent_options,
-							 num_opp_reserve=num_opp_reserve,
+							 num_opp_reserve=opponent_reserve_size,
 							 opponent_known_reserve=opponent_known_reserve)
 
 import re
