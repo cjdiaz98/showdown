@@ -4,7 +4,7 @@ from collections import defaultdict
 import constants
 from showdown.battle import Battle
 from showdown.battle_bots.llm.main import BattleBot as LLMBattleBot
-from showdown.battle_bots.llm.llm_helpers import format_prompt, parse_llm_output
+from showdown.battle_bots.llm.llm_helpers import parse_llm_output
 from showdown.battle_bots.safest.main import BattleBot as SafestBattleBot
 from showdown.engine.objects import Pokemon, Side, State
 import json
@@ -543,8 +543,9 @@ class TestLLMBattleBot(unittest.TestCase):
 	# @unittest.skip("Not implemented")
 	def test_find_best_move_llm_battle_bot(self):
 		# prompt = self.llm_battlebot.get_prompt_with_battle_context()
-		# print("PROMPT\n" + prompt)
+		# print("PROMPT\n" + str(prompt))
 		best_move = self.llm_battlebot.find_best_move()
+		print(best_move)
 		# self.assertEqual(2, len(best_move))
 		# self.assertTrue("hydropump" in best_move[0])
 
@@ -571,7 +572,8 @@ class TestLLMBattleBot(unittest.TestCase):
 class TestParseLLMOutput(unittest.TestCase):
     def test_parse_output_valid_move(self):
         llm_out = """CHOICE:
-            'move Dragon Ascent'"""
+            move Dragon Ascent
+			END"""
         parsed_out = parse_llm_output(llm_out)
         expected_out = ["move Dragon Ascent"]
         self.assertEqual(expected_out, parsed_out)
