@@ -32,7 +32,7 @@ class BattleBot(Battle):
 		# to do: See if we want to list a stop sequence such as "END"
 		if not parse_output:
 			return None
-		
+
 		# if self.force_switch or not moves: # How do we handle a forced switch?
 		decision = format_decision(self, parse_output[0])
 

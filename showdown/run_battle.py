@@ -76,7 +76,7 @@ async def get_battle_tag_and_opponent(ps_websocket_client: PSWebsocketClient):
 
 async def initialize_battle_with_tag(ps_websocket_client: PSWebsocketClient, set_request_json=True):
     battle_module = importlib.import_module('showdown.battle_bots.{}.main'.format(ShowdownConfig.battle_bot_module))
-
+    print("+++++++++++++++++++++++++++ INITIALIZE BATTLE WITH TAGS ++++++++++++++++++++++++++")
     battle_tag, opponent_name = await get_battle_tag_and_opponent(ps_websocket_client)
     while True:
         msg = await ps_websocket_client.receive_message()
@@ -86,6 +86,7 @@ async def initialize_battle_with_tag(ps_websocket_client: PSWebsocketClient, set
             user_id = user_json[constants.SIDE][constants.ID]
             opponent_id = constants.ID_LOOKUP[user_id]
             battle = battle_module.BattleBot(battle_tag)
+            print(type(battle))
             battle.opponent.name = opponent_id
             battle.opponent.account_name = opponent_name
 

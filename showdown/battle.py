@@ -107,6 +107,7 @@ class Battle(ABC):
         ...
 
     def start_non_team_preview_battle(self, user_json, opponent_switch_string):
+        print("+++++++++++++++++++++++ start_non_team_preview_battle +++++++++++++++++++++++")
         self.user.from_json(user_json, first_turn=True)
 
         pkmn_information = opponent_switch_string.split('|')[3]

@@ -35,13 +35,14 @@ Your opponent's known reserve pokemon.
 To designate your choice, put\n
 CHOICE:
 '<Option>'
+END
 Where <Option> is one of the following:
 If you choose to use a move, output:
 move <MOVE NAME>.
 If you choose to switch pokemon, output:
 switch <POKEMON TO SWITCH>.""" # To do 
 
-TERA_SYSTEM_INSTRUCTIONS = """If you choose a move and want to terastallize your pokemon in addition. Put the following under CHOICE:
+TERA_SYSTEM_INSTRUCTIONS = """If you choose a move and want to terastallize your pokemon the same turn. Put the following under CHOICE:
 terastallize <TERA TYPE>
 This is only possible when your current pokemon can terastallize."""
 
@@ -156,41 +157,96 @@ def get_move_damages(battle: Battle, state: State) -> dict[str, float]:
 
 import re
 
-def parse_llm_output(llm_output: str) -> list[str]:
+def parse_llm_output2(llm_output: str) -> list[str]:
 	"""
-	Parses the LLM output to extract a valid move or switch command, optionally including terastallize if there is a move command.
+	Parses the LLM output to extract valid move or switch commands, optionally including terastallize if there is a move command.
 	
 	Args:
 		llm_output (str): The output from the LLM.
 
 	Returns:
-		str: The parsed command(s) if valid, otherwise None.
+		list[str]: The parsed command(s) if valid, otherwise None.
 	"""
-	# Use regular expressions to match the commands
-	move_match = re.search(r"CHOICE:\s*'move\s+\w+(?:\s+\w+)*'", llm_output, re.IGNORECASE)
-	switch_match = re.search(r"CHOICE:\s*'switch\s+\w+(?:\s+\w+)*'", llm_output, re.IGNORECASE)
-	tera_match = re.search(r"\s*'terastallize\s+\w+(?:\s+\w+)*'", llm_output, re.IGNORECASE)
-
-	# If neither move nor switch command is found, return None (invalid)
-	if not move_match and not switch_match:
-		return None
-
-	commands = []
+	# Define patterns to find commands
+	move_pattern = r"CHOICE:\s*move\s+\w+(?:\s+\w+)*"
+	switch_pattern = r"CHOICE:\s*switch\s+\w+(?:\s+\w+)*"
+	tera_pattern = r"terastallize\s+\w+(?:\s+\w+)*"
 	
-	# If a move command is found, add it to the result
-	if move_match:
-		move_command = move_match.group(0).split("'")[1].strip()
-		commands.append(move_command)
+	# Extract the relevant portion of the output
+	choice_section = re.search(r"CHOICE:.*?END", llm_output, re.DOTALL)
+	
+	if choice_section:
+		choice_text = choice_section.group(0)
 		
-		# If a terastallize command is also found, add it to the result
-		if tera_match:
-			tera_command = tera_match.group(0).split("'")[1].strip()
-			commands.append(tera_command)
-	
-	# If only a switch command is found, add it to the result
-	elif switch_match:
-		switch_command = switch_match.group(0).split("'")[1].strip()
-		commands.append(switch_command)
+		# Extract move and switch commands
+		move_match = re.search(move_pattern, choice_text, re.IGNORECASE)
+		switch_match = re.search(switch_pattern, choice_text, re.IGNORECASE)
+		tera_match = re.search(tera_pattern, llm_output, re.IGNORECASE)
+		
+		commands = []
+		if move_match:
+			move_command = move_match.group(0).replace("CHOICE:", "").strip()
+			commands.append(move_command)
 
-	# Return the commands joined by newlines, or None if no valid commands were found
-	return commands if commands else None
+			# Check for a terastallize command if a move command is present
+			if tera_match:
+				tera_command = tera_match.group(0).strip()
+				commands.append(tera_command)
+		
+		elif switch_match:
+			# Extract switch command and ignore anything after the first newline
+			switch_command = switch_match.group(0).replace("CHOICE:", "").strip()
+			switch_command = re.sub(r'\s*\n.*$', '', switch_command)  # Remove everything after the first newline
+			commands.append(switch_command)
+		
+		return commands if commands else None
+	
+	return None
+
+def parse_llm_output(llm_output: str) -> list[str]:
+	"""
+	Parses the LLM output to extract valid move or switch commands, optionally including terastallize if there is a move command.
+	
+	Args:
+		llm_output (str): The output from the LLM.
+
+	Returns:
+		list[str]: The parsed command(s) if valid, otherwise None.
+	"""
+	# Define patterns to find commands
+	move_pattern = r"move (?:\S+(?: \S+)*)"
+	switch_pattern = r"switch (?:\S+(?: \S+)*)"
+	terastallize_pattern = r"terastallize \S+"
+	
+	# Extract the relevant portion of the output
+	choice_section = re.search(r"CHOICE:.*?END", llm_output, re.DOTALL)
+	
+	if choice_section:
+		choice_text = choice_section.group(0)
+		choice_text = choice_text.replace("CHOICE:", "").strip()
+		choice_text = choice_text.replace("END", "").strip()
+		
+		# Extract move and switch commands
+		move_match = re.search(move_pattern, choice_text, re.IGNORECASE)
+		switch_match = re.search(switch_pattern, choice_text, re.IGNORECASE)
+		tera_match = re.search(terastallize_pattern, llm_output, re.IGNORECASE)
+		
+		commands = []
+		if move_match:
+			move_command_split = move_match.group(0).split('\n')
+			if len(move_command_split) > 0:
+				commands.append(move_command_split[0].replace("move", "").strip())
+
+			# Check for a terastallize command if a move command is present
+			if tera_match:
+				tera_command = tera_match.group(0).strip()
+				commands.append(tera_command)
+		
+		elif switch_match:
+			switch_command = switch_match.group(0)
+			switch_command = re.sub(r'\s*\n.*$', '', switch_command)  # Remove everything after the first newline
+			commands.append(switch_command)
+		
+		return commands if commands else None
+	
+	return None
