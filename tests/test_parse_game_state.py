@@ -184,6 +184,11 @@ class TestCalculateDamageAmount(unittest.TestCase):
 	def test_parse_pokemon(self):
 		self.assertEqual(self.expected_charizard_dict, parse_pokemon(self.charizard))
 
+	def test_parse_pokemon_handles_divide_by_zero(self):
+		self.charizard.max_hp = 0
+		self.expected_charizard_dict["current_hp_percentage"] = 0
+		self.assertEqual(self.expected_charizard_dict, parse_pokemon(self.charizard))
+
 	def test_parse_side_team_hazards_active(self):
 		test_side = Side(self.charizard, [self.venusaur, self.blastoise], False, dict(), False)
 		test_side.side_conditions[constants.LIGHT_SCREEN] = 1

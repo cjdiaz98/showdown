@@ -9,6 +9,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_openai import OpenAI, ChatOpenAI
 from config import ShowdownConfig
 from showdown.battle_bots.llm.llm_helpers import parse_llm_output, generate_prompt_with_context
+import copy
 
 class BattleBot(Battle):
 	def __init__(self, *args, **kwargs):
@@ -19,6 +20,24 @@ class BattleBot(Battle):
 				max_retries=2,
 				api_key=ShowdownConfig.open_ai_key,
 			)
+
+	def __deepcopy__(self, memo):
+		# Create a new instance of the class without calling __init__
+		new_copy = self.__class__.__new__(self.__class__)
+		
+		# Add new object to memo to avoid infinite recursion in case of circular references
+		memo[id(self)] = new_copy
+
+		# Manually deep copy each attribute
+		for attr_name, attr_value in self.__dict__.items():
+			# Check if the attribute is something that should not be deepcopied
+			if attr_name in ["llm"]:  # Example of an attribute to skip deepcopying
+				setattr(new_copy, attr_name, attr_value)
+			else:
+				# Deepcopy the attribute
+				setattr(new_copy, attr_name, copy.deepcopy(attr_value, memo))
+
+		return new_copy
 
 	def find_best_move(self):
 		prompt = generate_prompt_with_context(self)

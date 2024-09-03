@@ -486,11 +486,15 @@ def parse_pokemon(pokemon: TransposePokemon) -> dict:
 	for i in range(len(pokemon.moves)):
 		moves[i] = pokemon.moves[i]
 
+	hp_percentage = 0
+	if pokemon.hp and pokemon.maxhp and pokemon.maxhp != 0:
+		hp_percentage = (pokemon.hp / pokemon.maxhp) * 100
+
 	parsed_dict = {
 		'id': pokemon.id,
 		'level': pokemon.level,
 		'types': pokemon.types,
-		'current_hp_percentage': (pokemon.hp / pokemon.maxhp) * 100,
+		'current_hp_percentage': hp_percentage,
 		'ability': pokemon.ability if pokemon.ability else constants.UNKNOWN_ABILITY,
 		'item': pokemon.item if pokemon.item else constants.UNKNOWN_ITEM,
 		'attack': pokemon.attack,
