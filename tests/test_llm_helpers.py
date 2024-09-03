@@ -115,6 +115,7 @@ class TestLLMPromptFormatting(unittest.TestLoader):
 	# Test for a typical scenario
     def test_generate_prompt_with_context_typical_case(self):
         # Create a mock Battle object
+        # to do: probably make this test more meaningful
         mock_battle = create_autospec(Battle, instance=True)
         mock_battle.create_state.return_value = MagicMock()
         mock_battle.get_all_options.return_value = (
