@@ -482,9 +482,10 @@ def parse_pokemon_old(pokemon: Pokemon) -> dict:
 
 def parse_pokemon(pokemon: TransposePokemon) -> str:
 	# Create a human-readable string representing the key attributes of the TransposePokemon instance
-	hp_percentage = 0
-	if pokemon.hp and pokemon.maxhp and pokemon.maxhp != 0:
-		hp_percentage = (pokemon.hp / pokemon.maxhp) * 100
+	if pokemon.hp == 0:
+		return f"{pokemon.id} is fainted."
+
+	hp_percentage = (pokemon.hp / pokemon.maxhp) * 100 if pokemon.maxhp else 0
 
 	boosts = []
 	if pokemon.attack_boost != 0:
@@ -516,13 +517,19 @@ def parse_side(side: Side) -> str:
 	active_pokemon = parse_pokemon(side.active)
 	reserve_pokemon = ", ".join(parse_pokemon(pokemon) for pokemon in side.reserve.values())
 
-	return (
-		f"Active Pokemon: {active_pokemon}\n"
-		f"Reserve Pokemon: {reserve_pokemon}\n"
-		f"Wish Active: {side.wish}\n"
-		f"Side Conditions: {side.side_conditions}\n"
-		f"Future Sight Active: {side.future_sight}"
-	)
+	context = [
+		f"Active Pokemon: {active_pokemon}",
+		f"Reserve Pokemon: {reserve_pokemon}"
+	]
+
+	if side.wish:
+		context.append(f"Wish Active: {side.wish}")
+	if side.side_conditions:
+		context.append(f"Side Conditions: {side.side_conditions}")
+	if side.future_sight:
+		context.append(f"Future Sight Active: {side.future_sight}")
+
+	return "\n".join(context)
 
 def parse_state(state: State) -> dict[str, any]:
 	return {
