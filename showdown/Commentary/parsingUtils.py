@@ -480,51 +480,49 @@ def parse_pokemon_old(pokemon: Pokemon) -> dict:
 	}
 	return parsed_dict
 
-def parse_pokemon(pokemon: TransposePokemon) -> dict:
-	# Create a dictionary representing the key attributes of the TransposePokemon instance
-	moves = [constants.UNKNOWN] * 4
-	for i in range(len(pokemon.moves)):
-		moves[i] = pokemon.moves[i]
-
+def parse_pokemon(pokemon: TransposePokemon) -> str:
+	# Create a human-readable string representing the key attributes of the TransposePokemon instance
 	hp_percentage = 0
 	if pokemon.hp and pokemon.maxhp and pokemon.maxhp != 0:
 		hp_percentage = (pokemon.hp / pokemon.maxhp) * 100
 
-	parsed_dict = {
-		'id': pokemon.id,
-		'level': pokemon.level,
-		'types': pokemon.types,
-		'current_hp_percentage': hp_percentage,
-		'ability': pokemon.ability if pokemon.ability else constants.UNKNOWN_ABILITY,
-		'item': pokemon.item if pokemon.item else constants.UNKNOWN_ITEM,
-		'attack': pokemon.attack,
-		'defense': pokemon.defense,
-		'special-attack': pokemon.special_attack,
-		'special-defense': pokemon.special_defense,
-		'speed': pokemon.speed,
-		'attack_boost': pokemon.attack_boost,
-		'defense_boost': pokemon.defense_boost,
-		'special_attack_boost': pokemon.special_attack_boost,
-		'special_defense_boost': pokemon.special_defense_boost,
-		'speed_boost': pokemon.speed_boost,
-		'accuracy_boost': pokemon.accuracy_boost,
-		'evasion_boost': pokemon.evasion_boost,
-		'status': pokemon.status,
-		'terastallized': pokemon.terastallized,
-		'volatileStatus': list(pokemon.volatile_status),
-		'moves': moves
-	}
-	return parsed_dict
+	boosts = []
+	if pokemon.attack_boost != 0:
+		boosts.append(f"Attack: {pokemon.attack_boost}")
+	if pokemon.defense_boost != 0:
+		boosts.append(f"Defense: {pokemon.defense_boost}")
+	if pokemon.special_attack_boost != 0:
+		boosts.append(f"Special Attack: {pokemon.special_attack_boost}")
+	if pokemon.special_defense_boost != 0:
+		boosts.append(f"Special Defense: {pokemon.special_defense_boost}")
+	if pokemon.speed_boost != 0:
+		boosts.append(f"Speed: {pokemon.speed_boost}")
+	if pokemon.accuracy_boost != 0:
+		boosts.append(f"Accuracy: {pokemon.accuracy_boost}")
+	if pokemon.evasion_boost != 0:
+		boosts.append(f"Evasion: {pokemon.evasion_boost}")
 
-def parse_side(side: Side) -> dict:
-	parsed_dict = {
-		"active": parse_pokemon(side.active),
-		"reserve": [parse_pokemon(pokemon) for pokemon in side.reserve.values()],
-		"wish active": side.wish, 
-		"side conditions": side.side_conditions,
-		"future sight active": side.future_sight
-	}
-	return parsed_dict
+	boosts_str = ", ".join(boosts) if boosts else "No boosts"
+
+	return (
+		f"{pokemon.id} (Level {pokemon.level}) - "
+		f"HP: {hp_percentage:.1f}%, "
+		f"Status: {pokemon.status or 'None'}, "
+		f"Boosts: {boosts_str}, "
+		f"Moves: {', '.join(pokemon.moves)}"
+	)
+
+def parse_side(side: Side) -> str:
+	active_pokemon = parse_pokemon(side.active)
+	reserve_pokemon = ", ".join(parse_pokemon(pokemon) for pokemon in side.reserve.values())
+
+	return (
+		f"Active Pokemon: {active_pokemon}\n"
+		f"Reserve Pokemon: {reserve_pokemon}\n"
+		f"Wish Active: {side.wish}\n"
+		f"Side Conditions: {side.side_conditions}\n"
+		f"Future Sight Active: {side.future_sight}"
+	)
 
 def parse_state(state: State) -> dict[str, any]:
 	return {
