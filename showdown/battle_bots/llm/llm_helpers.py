@@ -60,6 +60,7 @@ MOVE_MOST_DAMAGE = "The move projected to do the most damage is: {move_name}"
 USER_ACTIVE_PROMPT_TEMPLATE = "Your current active pokemon is: {user_active}"
 USER_RESERVE_PROMPT_TEMPLATE = "Your reserve pokemon are: {user_reserve}"
 USER_OPTIONS_PROMPT_TEMPLATE = "Your options are: {user_options}"
+LAST_MOVES_PROMPT_TEMPLATE = "Your last move was: {user_last_move}. Opponent's last move was: {opponent_last_move}"
 
 MOVE_DAMAGES_PROMPT_TEMPLATE = "Your pokemon's moves, and their projected damages are: {moves_and_damages}"
 
@@ -76,7 +77,8 @@ def create_combined_prompt_template():
 		USER_OPTIONS_PROMPT_TEMPLATE,
 		USER_RESERVE_PROMPT_TEMPLATE,
 		MOVE_DAMAGES_PROMPT_TEMPLATE,
-		OPPONENT_INFORMATION_PROMPT_TEMPLATE
+		OPPONENT_INFORMATION_PROMPT_TEMPLATE,
+		LAST_MOVES_PROMPT_TEMPLATE
 	])
 	
 	# Create a PromptTemplate from the combined template
@@ -134,7 +136,9 @@ def generate_prompt_with_context(battle: Battle) -> str:
 		opponent_pokemon=opponent_active,
 		opponent_options=opponent_options,
 		num_opp_reserve=opponent_reserve_size,
-		opponent_known_reserve=opponent_known_reserve
+		opponent_known_reserve=opponent_known_reserve,
+		user_last_move=battle.user.last_used_move.move,
+		opponent_last_move=battle.opponent.last_used_move.move
 	)
 	
 	return formatted_prompt
