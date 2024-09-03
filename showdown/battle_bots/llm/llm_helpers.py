@@ -53,8 +53,7 @@ BOT_PERSONALITY = "" # TO DO: list different personalities the bot can assume
 TERA_EXPLANATION = """When a Pokémon Terastallizes, it changes its type to its Tera Type, which could be the same as one of its current types or completely different.
 This transformation boosts the power of moves that match the new Tera Type and can give strategic advantages in battles.
 Terastallizing lasts until the battle ends, and only one pokemon can terastallize per battle.
-This allows for flexibility in type matchups and can be used offensively or defensively depending on the situation.
-To tera, add """
+This allows for flexibility in type matchups and can be used offensively or defensively depending on the situation."""
 
 MOVE_MOST_DAMAGE = "The move projected to do the most damage is: {move_name}"
 
