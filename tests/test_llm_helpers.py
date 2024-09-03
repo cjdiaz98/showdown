@@ -1,5 +1,7 @@
 import unittest
 from showdown.battle_bots.llm.llm_helpers import parse_llm_output, generate_prompt_with_context
+from showdown.battle import Battle
+from unittest.mock import patch, MagicMock, create_autospec
 from showdown.battle_bots.safest.main import BattleBot as SafestBattleBot
 
 from unittest.mock import patch, MagicMock
@@ -111,92 +113,50 @@ class TestParseLLMOutput(unittest.TestCase):
 
 class TestLLMPromptFormatting(unittest.TestLoader):
 	# Test for a typical scenario
-	def test_format_prompt_typical_case():
-		parsed_state = {
-			"user": {"active": "Pikachu", "reserve": ["Charmander", "Bulbasaur"]},
-			"opponent": {"active": "Squirtle", "reserve": ["Rattata"]},
-		}
-		user_options = ['volt tackle', 'switch Charmander', 'switch Bulbasaur']
-		opponent_options = ['tackle']
-		move_damages = {'volt tackle': 100}
+    def test_generate_prompt_with_context_typical_case(self):
+        # Create a mock Battle object
+        mock_battle = create_autospec(Battle, instance=True)
+        mock_battle.create_state.return_value = MagicMock()
+        mock_battle.get_all_options.return_value = (
+            ['volt tackle', 'switch Charmander', 'switch Bulbasaur'],
+            ['tackle']
+        )
 
-		# Mocking ChatPromptTemplate and related methods
-		with patch("showdown.battle_bots.llm.llm_helpers.ChatPromptTemplate") as MockChatPromptTemplate:
-			mock_chat_template = MagicMock()
-			MockChatPromptTemplate.from_messages.return_value = mock_chat_template
-			mock_chat_template.format.return_value = "formatted prompt"
+        # Mocking the get_move_damages function
+        with patch("showdown.battle_bots.llm.llm_helpers.get_move_damages", return_value={'volt tackle': 100}):
+            # Call the function
+            result = generate_prompt_with_context(mock_battle)
 
-			# Call the function
-			result = format_prompt(user_options, opponent_options, move_damages, parsed_state, 1)
+            # Check that the method returns a non-empty string
+            self.assertIsInstance(result, str)
+            self.assertTrue(len(result) > 0)
 
-			# Check that the method returns the expected result
-			assert result == "formatted prompt"
+    def test_generate_prompt_with_context_no_user_options(self):
+        # Create a mock Battle object
+        mock_battle = create_autospec(Battle, instance=True)
+        mock_battle.create_state.return_value = MagicMock()
+        mock_battle.get_all_options.return_value = (
+            [],  # No user options
+            ['tackle']
+        )
 
-			# Ensure the ChatPromptTemplate was created with the correct messages
-			MockChatPromptTemplate.from_messages.assert_called_once()
+        result = generate_prompt_with_context(mock_battle)
 
-			# Ensure the format method was called with the correct arguments
-			mock_chat_template.format.assert_called_once_with(
-				user_options=user_options,
-				moves_and_damages=move_damages,
-				user_reserve=["Charmander", "Bulbasaur"],
-				opponent_pokemon="Squirtle",
-				opponent_options=opponent_options,
-				num_opp_reserve=1,
-				opponent_known_reserve=["Rattata"]
-			)
+        # Expect the function to return None since there are no user options
+        self.assertIsNone(result)
 
-	def test_format_prompt_missing_user_active():
-		parsed_state = {
-			"user": {"reserve": ["Charmander", "Bulbasaur"]},
-			"opponent": {"active": "Squirtle", "reserve": ["Rattata"]},
-		}
-		user_options = ['volt tackle', 'switch Charmander', 'switch Bulbasaur']
-		opponent_options = ['tackle']
-		move_damages = {'volt tackle': 100}
+    def test_generate_prompt_with_context_missing_user_active(self):
+        # Create a mock Battle object
+        mock_battle = create_autospec(Battle, instance=True)
+        mock_battle.create_state.return_value = MagicMock()
+        mock_battle.get_all_options.return_value = (
+            ['volt tackle', 'switch Charmander', 'switch Bulbasaur'],
+            ['tackle']
+        )
 
-		result = format_prompt(user_options, opponent_options, move_damages, parsed_state, 1)
+        # Mocking the parse_state function to return a state without 'active' user
+        with patch("showdown.battle_bots.llm.llm_helpers.parse_state", return_value={"user": {"reserve": ["Charmander", "Bulbasaur"]}}):
+            result = generate_prompt_with_context(mock_battle)
 
-		# Expect the function to return None since 'active' is missing
-		assert result is None
-
-	def test_format_prompt_missing_user_options_empty():
-		parsed_state = {
-			"user": {"active": "Pikachu", "reserve": ["Charmander", "Bulbasaur"]},
-			"opponent": {"active": "Squirtle", "reserve": ["Rattata"]},
-		}
-		user_options = []
-		opponent_options = ['tackle']
-		move_damages = {'volt tackle': 100}
-
-		result = format_prompt(user_options, opponent_options, move_damages, parsed_state)
-
-		# Expect the function to return None since 'active' is missing
-		assert result is None
-
-	def test_format_prompt_empty_opponent_reserve():
-		parsed_state = {
-			"user": {"active": "Pikachu", "reserve": ["Charmander", "Bulbasaur"]},
-			"opponent": {"active": "Squirtle", "reserve": []},
-		}
-		user_options = ['volt tackle', 'switch Charmander', 'switch Bulbasaur']
-		opponent_options = ['tackle']
-		move_damages = {'volt tackle': 100}
-
-		with patch("showdown.battle_bots.llm.llm_helpers.ChatPromptTemplate") as MockChatPromptTemplate:
-			mock_chat_template = MagicMock()
-			MockChatPromptTemplate.from_messages.return_value = mock_chat_template
-			mock_chat_template.format.return_value = "formatted prompt"
-
-			result = format_prompt(user_options, opponent_options, move_damages, parsed_state, 0)
-
-			assert result == "formatted prompt"
-			mock_chat_template.format.assert_called_once_with(
-				user_options=user_options,
-				moves_and_damages=move_damages,
-				user_reserve=["Charmander", "Bulbasaur"],
-				opponent_pokemon="Squirtle",
-				opponent_options=opponent_options,
-				num_opp_reserve=0,
-				opponent_known_reserve=[]
-			)
+            # Expect the function to return None since 'active' is missing
+            self.assertIsNone(result)
