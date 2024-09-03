@@ -109,7 +109,6 @@ class TestParseLLMOutput(unittest.TestCase):
         expected_out = None
         self.assertEqual(expected_out, parsed_out)
 
-@unittest.skip
 class TestLLMPromptFormatting(unittest.TestLoader):
 	# Test for a typical scenario
 	def test_format_prompt_typical_case():
