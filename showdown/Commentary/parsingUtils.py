@@ -1,5 +1,5 @@
 from config import ShowdownConfig
-from showdown.battle import Pokemon, LastUsedMove, Side, State
+from showdown.battle import Pokemon, LastUsedMove, Side, State, Move
 from showdown.engine.objects import Pokemon as TransposePokemon
 from showdown.battle_bots.helpers import get_move_relevant_data
 import constants
@@ -503,33 +503,56 @@ def parse_pokemon(pokemon: TransposePokemon) -> str:
 	if pokemon.evasion_boost != 0:
 		boosts.append(f"Evasion: {pokemon.evasion_boost}")
 
-	boosts_str = ", ".join(boosts) if boosts else "No boosts"
-
+	boosts_str = ", ".join(boosts) if boosts else "No stat boosts/drops"
+	types_list = pokemon.types
 	return (
-		f"{pokemon.id} (Level {pokemon.level}) - "
-		f"HP: {hp_percentage:.1f}%, "
-		f"Status: {pokemon.status or 'None'}, "
-		f"Boosts: {boosts_str}, "
-		f"Moves: {', '.join(pokemon.moves)}"
+		f"{pokemon.id} (Level {pokemon.level}) - \n"
+		f"Type: {', '.join(types_list)}",
+		f"HP: {hp_percentage:.1f}%, \n"
+		f"Status: {pokemon.status or 'None'}, \n"
+		f"Stat Boosts/Drops: {boosts_str}, \n"
+		f"Moves:\n" + get_move_info_string(pokemon.moves),
 	)
 
-def parse_side(side: Side) -> str:
-	active_pokemon = parse_pokemon(side.active)
-	reserve_pokemon = ", ".join(parse_pokemon(pokemon) for pokemon in side.reserve.values())
 
-	context = [
-		f"Active Pokemon: {active_pokemon}",
-		f"Reserve Pokemon: {reserve_pokemon}"
-	]
+def get_move_info_string(moves: list[Move]) -> str:
+	moves_str = ""
+	for move in moves:
+		move_info = get_move_relevant_data(move.name)
+		if not move_info:
+			continue
+
+		move_type = move_info["type"]
+		accuracy = move_info["accuracy"]
+		name = move_info["name"]
+
+		curr_mov_str = """{name}
+		Type: {move_type}
+		Accuracy: {accuracy}"""
+
+		if moves_str["priority"]:
+			curr_mov_str += "\nPriority:" + str(moves_str["priority"])
+
+		moves_str += curr_mov_str
+	return moves_str
+
+def parse_side(side: Side) -> dict:
+	active_pokemon = parse_pokemon(side.active)
+	reserve_pokemon = "\n".join(parse_pokemon(pokemon) for pokemon in side.reserve.values())
+
+	parsed_dict = {
+		"active": active_pokemon,
+		"reserve": reserve_pokemon,
+	}
 
 	if side.wish:
-		context.append(f"Wish Active: {side.wish}")
+		parsed_dict["Wish Active"] = side.wish
 	if side.side_conditions:
-		context.append(f"Side Conditions: {side.side_conditions}")
+		parsed_dict["Side Conditions"] = side.side_conditions
 	if side.future_sight:
-		context.append(f"Future Sight Active: {side.future_sight}")
+		parsed_dict["Future Sight Active"] = side.future_sight
 
-	return "\n".join(context)
+	return parsed_dict
 
 def parse_state(state: State) -> dict[str, any]:
 	return {

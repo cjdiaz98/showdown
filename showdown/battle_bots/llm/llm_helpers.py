@@ -2,7 +2,7 @@ from langchain_core.messages import SystemMessage
 from langchain_core.prompts import PromptTemplate, SystemMessagePromptTemplate
 import constants
 from showdown.engine.objects import Pokemon
-from showdown.battle_bots.helpers import count_fainted_pokemon_in_reserve
+from showdown.battle_bots.helpers import count_fainted_pokemon_in_reserve, get_non_fainted_pokemon_in_reserve
 from showdown.Commentary.parsingUtils import parse_state
 from showdown.battle import Battle, State
 from ..helpers import get_battle_conditions
@@ -40,7 +40,12 @@ Where <Option> is one of the following:
 If you choose to use a move, output:
 move <MOVE NAME>.
 If you choose to switch pokemon, output:
-switch <POKEMON TO SWITCH>.""" # To do 
+switch <POKEMON TO SWITCH>.
+
+As for strategy, please keep in mind that Switching in another pokemon Will burn a turn and allow for the opponent to attack the incoming Pokemon or set up some condition that is favorable to them.
+Switching should only be done when it is expected that the switch will highly be in your favor, such as when the opponent can't do much damage to the incoming pokemon.
+For moves, even if a move doesn't damage the opponent, it could very well be worth using if it'll give you an advantage in the coming turns. There should be a good balance between setup and offense.
+"""
 
 TERA_SYSTEM_INSTRUCTIONS = """If you choose a move and want to terastallize your pokemon the same turn. Put the following under CHOICE:
 terastallize <TERA TYPE>
@@ -63,22 +68,34 @@ USER_OPTIONS_PROMPT_TEMPLATE = "Your options are: {user_options}"
 LAST_MOVES_PROMPT_TEMPLATE = "Your last move was: {user_last_move}. Opponent's last move was: {opponent_last_move}"
 
 MOVE_DAMAGES_PROMPT_TEMPLATE = "Your pokemon's moves, and their projected damages are: {moves_and_damages}"
+TYPE_WEAKNESSES_PROMPT_TEMPLATE = "Your pokemon's type weaknesses are: {type_weaknesses}"
+TYPE_RESISTANCES_PROMPT_TEMPLATE = "Your pokemon's type resistances are: {type_resistances}"
+OPPONENT_WEAKNESSES_PROMPT_TEMPLATE = "The opponent's pokemon's type weaknesses are: {opponent_type_weaknesses}"
 
 OPPONENT_INFORMATION_PROMPT_TEMPLATE = """Your opponent's active pokemon is: {opponent_pokemon}. Their known choice options are {opponent_options}.\n
 Your opponent has {num_opp_reserve} reserve pokemon. Of those, the following are known: {opponent_known_reserve}"""
+
+OPPONENT_NUM_KNOWN_MOVES_TEMPLATE = """{num_known_opponent_moves} out of 4 of your opponent's moves are known."""
+
+OUTSPEED_OPP_TEMPLATE = """Do we expect to outspeed the opponent's pokemon? {}"""
 
 def create_combined_prompt_template():
 	# Combine all templates into one big template
 	combined_template = "\n".join([
 		BATTLE_SYSTEM_INSTRUCTIONS,
 		TERA_SYSTEM_INSTRUCTIONS,
-		"BATTLE CONTEXT:",
+		"\nBATTLE CONTEXT:",
 		USER_ACTIVE_PROMPT_TEMPLATE,
+		TYPE_WEAKNESSES_PROMPT_TEMPLATE,
+		TYPE_RESISTANCES_PROMPT_TEMPLATE,
+		OPPONENT_WEAKNESSES_PROMPT_TEMPLATE,
 		USER_OPTIONS_PROMPT_TEMPLATE,
 		USER_RESERVE_PROMPT_TEMPLATE,
 		MOVE_DAMAGES_PROMPT_TEMPLATE,
 		OPPONENT_INFORMATION_PROMPT_TEMPLATE,
-		LAST_MOVES_PROMPT_TEMPLATE
+		OPPONENT_NUM_KNOWN_MOVES_TEMPLATE,
+		LAST_MOVES_PROMPT_TEMPLATE,
+		OUTSPEED_OPP_TEMPLATE
 	])
 	
 	# Create a PromptTemplate from the combined template
@@ -86,7 +103,10 @@ def create_combined_prompt_template():
 
 def generate_prompt_with_context(battle: Battle) -> str:
 	state = battle.create_state()
+	battle.user.lock_moves()
+	battle.opponent.lock_moves()
 	my_options, opponent_options = battle.get_all_options()
+	opponent_options.remove("splash") # remove to not throw off the LLM
 	# print("my options: ", my_options)
 	# print("opponent options: ", opponent_options)
 
@@ -114,6 +134,9 @@ def generate_prompt_with_context(battle: Battle) -> str:
 		print("no trainer active")
 		return None # If we are somehow missing the user context there's really not much we can do
 	
+	trainer_type_resistances = get_pokemon_resistances(battle.user.active)
+	trainer_type_weaknesses = get_pokemon_weaknesses(battle.user.active)
+
 	opponent_known_reserve = []
 	opponent_active = None
 
@@ -123,6 +146,9 @@ def generate_prompt_with_context(battle: Battle) -> str:
 		reserve = parsed_state["opponent"].get("reserve")
 		if reserve:
 			opponent_known_reserve = reserve
+	opponent_weaknesses = get_pokemon_weaknesses(battle.opponent.active)
+	num_known_opponent_moves = len(list(filter(lambda option: not option.startswith("switch"), opponent_options)))
+	outspeeds_opponent = "yes" if likely_to_outspeed_opponent(battle.user.active, battle.opponent.active) else "no"
 
 	# Create the combined prompt template
 	combined_prompt_template = create_combined_prompt_template()
@@ -131,14 +157,19 @@ def generate_prompt_with_context(battle: Battle) -> str:
 	formatted_prompt = combined_prompt_template.format(
 		user_active=trainer_active,
 		user_options=my_options,
+		type_resistances=trainer_type_resistances,
+		type_weaknesses=trainer_type_weaknesses,
 		moves_and_damages=move_damages,
 		user_reserve=trainer_reserve,
 		opponent_pokemon=opponent_active,
 		opponent_options=opponent_options,
+		num_known_opponent_moves = num_known_opponent_moves,
 		num_opp_reserve=opponent_reserve_size,
 		opponent_known_reserve=opponent_known_reserve,
+		opponent_type_weaknesses=opponent_weaknesses,
 		user_last_move=battle.user.last_used_move.move,
-		opponent_last_move=battle.opponent.last_used_move.move
+		opponent_last_move=battle.opponent.last_used_move.move,
+		outspeeds_opponent = outspeeds_opponent
 	)
 	
 	return formatted_prompt
@@ -157,6 +188,37 @@ def get_move_damages(battle: Battle, state: State) -> dict[str, float]:
 			move_damages[move_name] = move_damage[0] # just get a single number
 		
 	return move_damages
+
+from showdown.battle_bots.type_matchup_helper import get_matchups
+
+def get_pokemon_weaknesses(pokemon: Pokemon) -> set[str]:
+	types = pokemon.types
+	matchups = get_matchups(types)
+	weaknesses = set()
+	for type in matchups:
+		if matchups[type] > 1:
+			weaknesses.add(type)
+
+	return weaknesses
+
+def get_pokemon_resistances(pokemon: Pokemon) -> set[str]:
+	types = pokemon.types
+	matchups = get_matchups(types)
+	resistances = set()
+	for type in matchups:
+		if matchups[type] < 1:
+			resistances.add(type)
+
+	return resistances 
+
+def likely_to_outspeed_opponent(pokemonA: Pokemon, pokemonB: Pokemon) -> bool:
+	# to do: see team_datasets.py:speed_check method
+	# pokemonB.speed_range
+	# battle: Battle
+	# battle.check_speed_ranges(battle, msg_lines)
+
+	# note: I don't think this is 100% reliable
+	return pokemonA.speed > pokemonB.speed
 
 import re
 

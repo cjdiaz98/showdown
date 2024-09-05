@@ -241,7 +241,7 @@ class Pokemon(object):
     ):
         self.id = identifier
         self.level = level
-        self.types = types
+        self.types: list[str] = types
         self.hp = hp
         self.maxhp = maxhp
         self.ability = ability
