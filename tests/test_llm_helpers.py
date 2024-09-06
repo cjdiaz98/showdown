@@ -1,17 +1,17 @@
 import unittest
-from showdown.battle_bots.llm.llm_helpers import parse_llm_output, generate_prompt_with_context, get_pokemon_weaknesses
+from showdown.battle_bots.llm.llm_helpers import parse_choice_from_llm_output, generate_prompt_with_context, get_pokemon_weaknesses, parse_commentary_from_llm_output
 from showdown.battle import Battle
 from unittest.mock import patch, MagicMock, create_autospec
 from showdown.battle_bots.safest.main import BattleBot as SafestBattleBot
 
 from unittest.mock import patch, MagicMock
 
-class TestParseLLMOutput(unittest.TestCase):
+class TestParseChoiceFromLLMOutput(unittest.TestCase):
 	def test_parse_output_valid_move(self):
 		llm_out = """CHOICE:
 			move Dragon Ascent
 			END"""
-		parsed_out = parse_llm_output(llm_out)
+		parsed_out = parse_choice_from_llm_output(llm_out)
 		expected_out = ["Dragon Ascent"]
 		self.assertEqual(expected_out, parsed_out)
 
@@ -20,7 +20,7 @@ class TestParseLLMOutput(unittest.TestCase):
 			move Dragon Ascent
 			END
 			Make sure we can tune out some other gibberish here."""
-		parsed_out = parse_llm_output(llm_out)
+		parsed_out = parse_choice_from_llm_output(llm_out)
 		expected_out = ["Dragon Ascent"]
 		self.assertEqual(expected_out, parsed_out)
 
@@ -29,7 +29,7 @@ class TestParseLLMOutput(unittest.TestCase):
 			move Dragon Ascent
 			terastallize Flying
 			END"""
-		parsed_out = parse_llm_output(llm_out)
+		parsed_out = parse_choice_from_llm_output(llm_out)
 		expected_out = ["Dragon Ascent", "terastallize Flying"]
 		self.assertEqual(expected_out, parsed_out)
 
@@ -38,7 +38,7 @@ class TestParseLLMOutput(unittest.TestCase):
 			move Dragon Ascent
 			move Tackle
 			END"""
-		parsed_out = parse_llm_output(llm_out)
+		parsed_out = parse_choice_from_llm_output(llm_out)
 		expected_out = ["Dragon Ascent"]
 		self.assertEqual(expected_out, parsed_out)
 
@@ -49,7 +49,7 @@ class TestParseLLMOutput(unittest.TestCase):
 			CHOICE:
 			switch Pikachu
 			END"""
-		parsed_out = parse_llm_output(llm_out)
+		parsed_out = parse_choice_from_llm_output(llm_out)
 		expected_out = ["Dragon Ascent"]
 		self.assertEqual(expected_out, parsed_out)
 
@@ -57,13 +57,13 @@ class TestParseLLMOutput(unittest.TestCase):
 		llm_out = """CHOICE:
 			move
 			END"""
-		parsed_out = parse_llm_output(llm_out)
+		parsed_out = parse_choice_from_llm_output(llm_out)
 		expected_out = None
 		self.assertEqual(expected_out, parsed_out)
 
 	def test_parse_output_empty_string_should_fail(self):
 		llm_out = ""
-		parsed_out = parse_llm_output(llm_out)
+		parsed_out = parse_choice_from_llm_output(llm_out)
 		expected_out = None
 		self.assertEqual(expected_out, parsed_out)
 
@@ -71,19 +71,19 @@ class TestParseLLMOutput(unittest.TestCase):
 		llm_out = """CHOICE:
 			switch Kyogre
 			END"""
-		parsed_out = parse_llm_output(llm_out)
+		parsed_out = parse_choice_from_llm_output(llm_out)
 		expected_out = ["switch Kyogre"]
 		self.assertEqual(expected_out, parsed_out)
 
 	def test_parse_output_excess_whitespace_succeeds(self):
 		llm_out = """CHOICE: \n\nswitch Kyogre\nEND    """
-		parsed_out = parse_llm_output(llm_out)
+		parsed_out = parse_choice_from_llm_output(llm_out)
 		expected_out = ["switch Kyogre"]
 		self.assertEqual(expected_out, parsed_out)
 
 	def test_parse_output_no_whitespace_succeeds(self):
 		llm_out = """CHOICE:switch Kyogre END"""
-		parsed_out = parse_llm_output(llm_out)
+		parsed_out = parse_choice_from_llm_output(llm_out)
 		expected_out = ["switch Kyogre"]
 		self.assertEqual(expected_out, parsed_out)
 
@@ -91,7 +91,7 @@ class TestParseLLMOutput(unittest.TestCase):
 		llm_out = """CHOICE:
 			switch
 			END"""
-		parsed_out = parse_llm_output(llm_out)
+		parsed_out = parse_choice_from_llm_output(llm_out)
 		expected_out = None
 		self.assertEqual(expected_out, parsed_out)
 
@@ -101,15 +101,69 @@ class TestParseLLMOutput(unittest.TestCase):
 			END
 			terastallize Flying
 			END"""
-		parsed_out = parse_llm_output(llm_out)
+		parsed_out = parse_choice_from_llm_output(llm_out)
 		expected_out = ["switch Kyogre"]
 		self.assertEqual(expected_out, parsed_out)
 
 	def test_parse_output_invalid_response_format_should_fail(self):
 		llm_out = """not following the expected format at all"""
-		parsed_out = parse_llm_output(llm_out)
+		parsed_out = parse_choice_from_llm_output(llm_out)
 		expected_out = None
 		self.assertEqual(expected_out, parsed_out)
+
+class TestParseCommentaryFromLLMOutput(unittest.TestCase):
+	def test_parse_output_switch_with_commentary(self):
+		expected_commentary = "You may have vested my Pikachu, but no way your Charizard is any match for the legendary ruler of the seas, Kyogre!"
+		llm_out = f"""COMMENTARY:
+		 {expected_commentary}
+		 END
+		CHOICE:
+			switch Kyogre
+			END"""
+		parsed_out = parse_commentary_from_llm_output(llm_out)
+		self.assertEqual(expected_commentary, parsed_out)
+
+	def test_parse_output_move_tera_and_commentary(self):
+		expected_commentary = "No way your Venusaur can withstand my Rayquaza's signature Dragon Ascent move, boosted further by terastallization. Game over!"
+		llm_out = f"""COMMENTARY:
+		{expected_commentary}
+		 END
+		CHOICE:
+			move Dragon Ascent
+			terastallize Flying
+			END"""
+		parsed_out = parse_commentary_from_llm_output(llm_out)
+		self.assertEqual(expected_commentary, parsed_out)
+
+	def test_parse_commentary_ignores_any_text_before_markers(self):
+		expected_commentary = "Commentary after markers"
+		llm_out = f"""Commentary before markers.
+		COMMENTARY:
+		{expected_commentary}
+		 END
+		{expected_commentary}
+		CHOICE:
+			move Dragon Ascent
+			terastallize Flying
+			END"""
+		parsed_out = parse_commentary_from_llm_output(llm_out)
+		self.assertEqual(expected_commentary, parsed_out)
+
+	def test_parse_output_empty_commentary(self):
+		expected_commentary = ""
+		llm_out = f"""COMMENTARY:
+		 END
+		CHOICE:
+			move Dragon Ascent
+			END"""
+		parsed_out = parse_commentary_from_llm_output(llm_out)
+		self.assertEqual(expected_commentary, parsed_out)
+
+	def test_parse_output_no_end_marker(self):
+		expected_commentary = ""
+		llm_out = f"""COMMENTARY:"""
+		parsed_out = parse_commentary_from_llm_output(llm_out)
+		self.assertEqual(expected_commentary, parsed_out)
 
 class TestLLMPromptFormatting(unittest.TestCase):
 	# Test for a typical scenario

@@ -296,7 +296,7 @@ def parse_llm_output2(llm_output: str) -> list[str]:
 	
 	return None
 
-def parse_llm_output(llm_output: str) -> list[str]:
+def parse_choice_from_llm_output(llm_output: str) -> list[str]:
 	"""
 	Parses the LLM output to extract valid move or switch commands, optionally including terastallize if there is a move command.
 	
@@ -343,3 +343,39 @@ def parse_llm_output(llm_output: str) -> list[str]:
 		return commands if commands else None
 	
 	return None
+
+def parse_commentary_from_llm_output(llm_output: str) -> str:
+    """
+    Parses the LLM output to extract any bot commentary.
+    
+    Args:
+        llm_output (str): The output from the LLM.
+
+    Returns:
+        str: The parsed commentary if valid, otherwise an empty string.
+    """
+    # Split the content based on COMMENTARY marker
+    commentary_marker = "COMMENTARY:"
+    end_marker = "END"
+
+    # Find the section that begins with COMMENTARY
+    commentary_start = llm_output.find(commentary_marker)
+    
+    # If COMMENTARY is not found, return an empty string
+    if commentary_start == -1:
+        return ""
+
+    # Slice from the point after "COMMENTARY:" marker
+    commentary_start += len(commentary_marker)
+
+    # Find the end of the commentary section
+    commentary_end = llm_output.find(end_marker, commentary_start)
+    
+    # If END is not found after COMMENTARY, return an empty string
+    if commentary_end == -1:
+        return ""
+    
+    # Extract and clean the commentary (strip leading/trailing spaces and newlines)
+    commentary = llm_output[commentary_start:commentary_end].strip()
+
+    return commentary

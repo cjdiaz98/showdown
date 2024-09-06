@@ -8,7 +8,7 @@ from pprint import pprint
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import OpenAI, ChatOpenAI
 from config import ShowdownConfig
-from showdown.battle_bots.llm.llm_helpers import parse_llm_output, generate_prompt_with_context
+from showdown.battle_bots.llm.llm_helpers import parse_choice_from_llm_output, generate_prompt_with_context
 import copy
 
 class BattleBot(Battle):
@@ -47,7 +47,7 @@ class BattleBot(Battle):
 
 		parse_output = None
 		if llm_response:
-			parse_output = parse_llm_output(llm_response.content)
+			parse_output = parse_choice_from_llm_output(llm_response.content)
 		# to do: See if we want to list a stop sequence such as "END"
 		if not parse_output:
 			return None

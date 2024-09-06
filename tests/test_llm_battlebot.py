@@ -4,7 +4,7 @@ from collections import defaultdict
 import constants
 from showdown.battle import Battle
 from showdown.battle_bots.llm.main import BattleBot as LLMBattleBot
-from showdown.battle_bots.llm.llm_helpers import parse_llm_output
+from showdown.battle_bots.llm.llm_helpers import parse_choice_from_llm_output
 from showdown.battle_bots.safest.main import BattleBot as SafestBattleBot
 from showdown.engine.objects import Pokemon, Side, State
 import json
