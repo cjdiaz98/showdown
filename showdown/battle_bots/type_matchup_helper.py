@@ -168,8 +168,6 @@ def get_matchups(types: list[str]) -> dict[str: float]:
 	matchups = create_type_multiplier_dict()
 	for t in types:
 		for x in DEFENDING_TYPE_MATCHUPS:
-			print("t " + str(t))
-			print("x " + str(x))
 			matchups[x] *= DEFENDING_TYPE_MATCHUPS[t][x]
 
 	return matchups

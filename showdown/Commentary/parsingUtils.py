@@ -427,9 +427,6 @@ def parse_turns_from_file(filename) -> dict[int, dict]:
 	return parsed_data
 
 def parseRoomsToJoin(text) -> list[dict]:
-	print("Parse rooms to join")
-	print(text)
-
 	# Split the text and isolate the JSON part
 	json_text = text.split('|roomlist|')[-1]
 	
@@ -480,7 +477,7 @@ def parse_pokemon_old(pokemon: Pokemon) -> dict:
 	}
 	return parsed_dict
 
-def parse_pokemon(pokemon: TransposePokemon) -> str:
+def parse_pokemon(pokemon: TransposePokemon, isReserve = False) -> str:
 	# Create a human-readable string representing the key attributes of the TransposePokemon instance
 	if pokemon.hp == 0:
 		return f"{pokemon.id} is fainted."
@@ -505,40 +502,53 @@ def parse_pokemon(pokemon: TransposePokemon) -> str:
 
 	boosts_str = ", ".join(boosts) if boosts else "No stat boosts/drops"
 	types_list = pokemon.types
-	return (
-		f"{pokemon.id} (Level {pokemon.level}) - \n"
-		f"Type: {', '.join(types_list)}",
-		f"HP: {hp_percentage:.1f}%, \n"
-		f"Status: {pokemon.status or 'None'}, \n"
-		f"Stat Boosts/Drops: {boosts_str}, \n"
-		f"Moves:\n" + get_move_info_string(pokemon.moves),
-	)
+	pkm_string = (f"{pokemon.id} (Level {pokemon.level}) - \n"
+		 + f"Type: {', '.join(types_list)}\n"
+		 + f"HP: {hp_percentage:.1f}%, \n"
+		 + f"Status: {pokemon.status or 'None'}, \n"
+		 + f"Moves:\n"
+		 + get_move_info_string(pokemon.moves, not isReserve)) # for reserve pokemon, include minimal information
+	
+	if not isReserve:
+		pkm_string += f"Stat Boosts/Drops: {boosts_str}, \n"
+	return pkm_string
 
-
-def get_move_info_string(moves: list[Move]) -> str:
+def get_move_info_string(moves: list[dict], get_detailed_info = True) -> str:
+	# to do: unit test!
 	moves_str = ""
-	for move in moves:
-		move_info = get_move_relevant_data(move.name)
+	for move_dict in moves:
+		move_info = get_move_relevant_data(move_dict["id"])
 		if not move_info:
+			continue
+
+		name = move_info["name"]
+		if not get_detailed_info:
+			# just include string name
+			moves_str += name + ","
 			continue
 
 		move_type = move_info["type"]
 		accuracy = move_info["accuracy"]
-		name = move_info["name"]
 
-		curr_mov_str = """{name}
+		curr_mov_str = f"""{name}
 		Type: {move_type}
 		Accuracy: {accuracy}"""
 
-		if moves_str["priority"]:
-			curr_mov_str += "\nPriority:" + str(moves_str["priority"])
+		if move_info["priority"]:
+			curr_mov_str += "\nPriority: " + str(move_info["priority"])
 
-		moves_str += curr_mov_str
+		if move_dict["disabled"]:
+			curr_mov_str += "\nIsDisabled: true"
+		moves_str += curr_mov_str + "\n"
+
 	return moves_str
 
 def parse_side(side: Side) -> dict:
 	active_pokemon = parse_pokemon(side.active)
-	reserve_pokemon = "\n".join(parse_pokemon(pokemon) for pokemon in side.reserve.values())
+	parsed_reserve_pokemon = [parse_pokemon(pokemon) for pokemon in side.reserve.values()]
+	print("parsed_reserve_pokemon")
+	print(parsed_reserve_pokemon)
+	reserve_pokemon = "\n".join(parsed_reserve_pokemon)
 
 	parsed_dict = {
 		"active": active_pokemon,

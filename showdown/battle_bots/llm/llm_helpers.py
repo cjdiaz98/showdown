@@ -86,16 +86,15 @@ def create_combined_prompt_template():
 		TERA_SYSTEM_INSTRUCTIONS,
 		"\nBATTLE CONTEXT:",
 		USER_ACTIVE_PROMPT_TEMPLATE,
+		USER_OPTIONS_PROMPT_TEMPLATE,
 		TYPE_WEAKNESSES_PROMPT_TEMPLATE,
 		TYPE_RESISTANCES_PROMPT_TEMPLATE,
-		OPPONENT_WEAKNESSES_PROMPT_TEMPLATE,
-		USER_OPTIONS_PROMPT_TEMPLATE,
 		USER_RESERVE_PROMPT_TEMPLATE,
 		MOVE_DAMAGES_PROMPT_TEMPLATE,
 		OPPONENT_INFORMATION_PROMPT_TEMPLATE,
+		OPPONENT_WEAKNESSES_PROMPT_TEMPLATE,
 		OPPONENT_NUM_KNOWN_MOVES_TEMPLATE,
-		LAST_MOVES_PROMPT_TEMPLATE,
-		OUTSPEED_OPP_TEMPLATE
+		LAST_MOVES_PROMPT_TEMPLATE
 	])
 	
 	# Create a PromptTemplate from the combined template
@@ -106,7 +105,9 @@ def generate_prompt_with_context(battle: Battle) -> str:
 	battle.user.lock_moves()
 	battle.opponent.lock_moves()
 	my_options, opponent_options = battle.get_all_options()
-	opponent_options.remove("splash") # remove to not throw off the LLM
+	if "splash" in opponent_options:
+		opponent_options.remove("splash") # remove to not throw off the LLM
+
 	# print("my options: ", my_options)
 	# print("opponent options: ", opponent_options)
 
@@ -136,6 +137,10 @@ def generate_prompt_with_context(battle: Battle) -> str:
 	
 	trainer_type_resistances = get_pokemon_resistances(battle.user.active)
 	trainer_type_weaknesses = get_pokemon_weaknesses(battle.user.active)
+	if battle.user.last_used_move:
+		trainer_last_move_str = battle.user.last_used_move.move
+	else:
+		trainer_last_move_str = "None"
 
 	opponent_known_reserve = []
 	opponent_active = None
@@ -148,17 +153,41 @@ def generate_prompt_with_context(battle: Battle) -> str:
 			opponent_known_reserve = reserve
 	opponent_weaknesses = get_pokemon_weaknesses(battle.opponent.active)
 	num_known_opponent_moves = len(list(filter(lambda option: not option.startswith("switch"), opponent_options)))
-	outspeeds_opponent = "yes" if likely_to_outspeed_opponent(battle.user.active, battle.opponent.active) else "no"
+	# outspeeds_opponent = "yes" if likely_to_outspeed_opponent(battle.user.active, battle.opponent.active) else "no"
+	if battle.opponent.last_used_move:
+		opp_last_move_str = battle.opponent.last_used_move.move
+	else:
+		opp_last_move_str = "None"
+
+	values = [
+		trainer_active,
+		my_options,
+		trainer_type_resistances,
+		trainer_type_weaknesses,
+		move_damages,
+		trainer_reserve,
+		opponent_active,
+		opponent_options,
+		num_known_opponent_moves,
+		opponent_reserve_size,
+		opponent_known_reserve,
+		opponent_weaknesses,
+		battle.user.last_used_move.move,
+		battle.opponent.last_used_move.move
+	]
+
+	# Assert that none of the values are None
+	assert all(value is not None for value in values), "One or more values passed to format are None"
 
 	# Create the combined prompt template
 	combined_prompt_template = create_combined_prompt_template()
-	
+
 	# Format the template with the extracted arguments
 	formatted_prompt = combined_prompt_template.format(
 		user_active=trainer_active,
+		type_resistances=str(trainer_type_resistances),
+		type_weaknesses=str(trainer_type_weaknesses),
 		user_options=my_options,
-		type_resistances=trainer_type_resistances,
-		type_weaknesses=trainer_type_weaknesses,
 		moves_and_damages=move_damages,
 		user_reserve=trainer_reserve,
 		opponent_pokemon=opponent_active,
@@ -166,10 +195,9 @@ def generate_prompt_with_context(battle: Battle) -> str:
 		num_known_opponent_moves = num_known_opponent_moves,
 		num_opp_reserve=opponent_reserve_size,
 		opponent_known_reserve=opponent_known_reserve,
-		opponent_type_weaknesses=opponent_weaknesses,
-		user_last_move=battle.user.last_used_move.move,
-		opponent_last_move=battle.opponent.last_used_move.move,
-		outspeeds_opponent = outspeeds_opponent
+		opponent_type_weaknesses=str(opponent_weaknesses),
+		user_last_move=trainer_last_move_str,
+		opponent_last_move=opp_last_move_str
 	)
 	
 	return formatted_prompt
