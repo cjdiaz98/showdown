@@ -6,7 +6,7 @@ import logging
 import constants
 from data import all_move_json
 from data import pokedex
-from showdown.battle import Pokemon
+from showdown.battle import Pokemon, Battle
 from showdown.battle import LastUsedMove
 from showdown.battle import DamageDealt
 from showdown.battle import StatRange
@@ -808,7 +808,7 @@ def noinit(battle, split_msg):
         logger.debug("Renamed battle to {}".format(battle.battle_tag))
 
 
-def check_speed_ranges(battle, msg_lines):
+def check_speed_ranges(battle: Battle, msg_lines: list[str]):
     """
     Intention:
         This function is intended to set the min or max possible speed that the opponent's
@@ -851,6 +851,7 @@ def check_speed_ranges(battle, msg_lines):
         (not bot_went_first and can_have_priority_modified(battle, battle.opponent.active, moves[0][1][constants.ID])) or
         (bot_went_first and can_have_priority_modified(battle, battle.user.active, moves[0][1][constants.ID]))
     ):
+        # to do: does this account for moves that have negative priority?
         return
 
     battle_copy = deepcopy(battle)
@@ -881,6 +882,7 @@ def check_speed_ranges(battle, msg_lines):
     if battle.trick_room:
         bot_went_first = not bot_went_first
 
+    # to do: what if an opponent switches out their pokemon? Do we lose the info we surmised about their speed
     if bot_went_first:
         opponent_max_speed = min(battle.opponent.active.speed_range.max, speed_threshold)
         battle.opponent.active.speed_range = StatRange(

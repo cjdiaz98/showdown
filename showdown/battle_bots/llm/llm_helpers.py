@@ -83,14 +83,16 @@ LAST_MOVES_PROMPT_TEMPLATE = "Your last move was: {user_last_move}. Opponent's l
 MOVE_DAMAGES_PROMPT_TEMPLATE = "Your pokemon's moves, and their projected damages are: {moves_and_damages}"
 TYPE_WEAKNESSES_PROMPT_TEMPLATE = "Your pokemon's type weaknesses are: {type_weaknesses}"
 TYPE_RESISTANCES_PROMPT_TEMPLATE = "Your pokemon's type resistances are: {type_resistances}"
+
 OPPONENT_WEAKNESSES_PROMPT_TEMPLATE = "The opponent's pokemon's type weaknesses are: {opponent_type_weaknesses}"
+OPPONENT_RESISTANCES_PROMPT_TEMPLATE = "The opponent's pokemon's type resistances are: {opponent_type_resistances}"
 
 OPPONENT_INFORMATION_PROMPT_TEMPLATE = """Your opponent's active pokemon is: {opponent_pokemon}. Their known choice options are {opponent_options}.\n
 Your opponent has {num_opp_reserve} reserve pokemon. Of those, the following are known: {opponent_known_reserve}"""
 
 OPPONENT_NUM_KNOWN_MOVES_TEMPLATE = """{num_known_opponent_moves} out of 4 of your opponent's moves are known."""
 
-OUTSPEED_OPP_TEMPLATE = """Do we expect to outspeed the opponent's pokemon? {}"""
+OUTSPEED_OPP_TEMPLATE = """Our current pokemon outspeeds the opponent's pokemon: {do_we_outspeed_opponent}"""
 
 def create_combined_prompt_template():
 	# Combine all templates into one big template
@@ -108,8 +110,10 @@ def create_combined_prompt_template():
 		MOVE_DAMAGES_PROMPT_TEMPLATE,
 		OPPONENT_INFORMATION_PROMPT_TEMPLATE,
 		OPPONENT_WEAKNESSES_PROMPT_TEMPLATE,
+		OPPONENT_RESISTANCES_PROMPT_TEMPLATE,
 		OPPONENT_NUM_KNOWN_MOVES_TEMPLATE,
-		LAST_MOVES_PROMPT_TEMPLATE
+		LAST_MOVES_PROMPT_TEMPLATE,
+		OUTSPEED_OPP_TEMPLATE
 	])
 	
 	# Create a PromptTemplate from the combined template
@@ -167,13 +171,14 @@ def generate_prompt_with_context(battle: Battle) -> str:
 		if reserve:
 			opponent_known_reserve = reserve
 	opponent_weaknesses = get_pokemon_weaknesses(battle.opponent.active)
+	opponent_resistances = get_pokemon_resistances(battle.opponent.active)
 	num_known_opponent_moves = len(list(filter(lambda option: not option.startswith("switch"), opponent_options)))
-	# outspeeds_opponent = "yes" if likely_to_outspeed_opponent(battle.user.active, battle.opponent.active) else "no"
 	if battle.opponent.last_used_move:
 		opp_last_move_str = battle.opponent.last_used_move.move
 	else:
 		opp_last_move_str = "None"
 
+	do_we_outspeed = pokemon_outspeeds_opponent(battle.user.active, battle.opponent.active)
 	values = [
 		trainer_active,
 		my_options,
@@ -187,8 +192,10 @@ def generate_prompt_with_context(battle: Battle) -> str:
 		opponent_reserve_size,
 		opponent_known_reserve,
 		opponent_weaknesses,
+		opponent_resistances,
 		battle.user.last_used_move.move,
-		battle.opponent.last_used_move.move
+		battle.opponent.last_used_move.move,
+		do_we_outspeed
 	]
 
 	# Assert that none of the values are None
@@ -211,8 +218,10 @@ def generate_prompt_with_context(battle: Battle) -> str:
 		num_opp_reserve=opponent_reserve_size,
 		opponent_known_reserve=opponent_known_reserve,
 		opponent_type_weaknesses=str(opponent_weaknesses),
+		opponent_type_resistances=opponent_resistances,
 		user_last_move=trainer_last_move_str,
-		opponent_last_move=opp_last_move_str
+		opponent_last_move=opp_last_move_str,
+		do_we_outspeed_opponent=do_we_outspeed
 	)
 	
 	return formatted_prompt
@@ -254,14 +263,21 @@ def get_pokemon_resistances(pokemon: Pokemon) -> set[str]:
 
 	return resistances 
 
-def likely_to_outspeed_opponent(pokemonA: Pokemon, pokemonB: Pokemon) -> bool:
+def pokemon_outspeeds_opponent(pokemonA: Pokemon, opposingPokemon: Pokemon) -> str:
+	print("Speed range:" + str(opposingPokemon.speed_range))
+	print("Stats:" + str(pokemonA.stats))
+	
+	if not opposingPokemon.speed_range or not pokemonA.stats or not pokemonA.stats.get(constants.SPEED):
+		return "Maybe"
+	
+	our_speed = pokemonA.stats.get(constants.SPEED)
 	# to do: see team_datasets.py:speed_check method
-	# pokemonB.speed_range
-	# battle: Battle
-	# battle.check_speed_ranges(battle, msg_lines)
-
-	# note: I don't think this is 100% reliable
-	return pokemonA.speed > pokemonB.speed
+	if our_speed < opposingPokemon.speed_range.min:
+		return "No"
+	elif our_speed <= opposingPokemon.speed_range.max:
+		return "Maybe"
+	else:
+		return "Yes"
 
 import re
 
