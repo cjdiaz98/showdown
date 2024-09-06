@@ -85,8 +85,14 @@ async def initialize_battle_with_tag(ps_websocket_client: PSWebsocketClient, set
             user_json = json.loads(split_msg[2].strip('\''))
             user_id = user_json[constants.SIDE][constants.ID]
             opponent_id = constants.ID_LOOKUP[user_id]
-            battle = battle_module.BattleBot(battle_tag)
-            print(type(battle))
+
+            if ShowdownConfig.battle_bot_module == "llm":
+                # If the module is 'llm', pass the ps_websocket_client
+                battle = battle_module.BattleBot(battle_tag, ps_websocket_client=ps_websocket_client)
+            else:
+                # For other modules, instantiate without the ps_websocket_client
+                battle = battle_module.BattleBot(battle_tag)            
+                
             battle.opponent.name = opponent_id
             battle.opponent.account_name = opponent_name
 

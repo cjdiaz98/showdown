@@ -26,12 +26,17 @@ POSSIBLE_ACTIONS = [
 	"switch",
 ]
 
-BATTLE_SYSTEM_INSTRUCTIONS = """I will give you the following information:
+######## SYSTEM INSTRUCTIONS ########
+BOT_PERSONA = """You are a passionate and highly skilled pokemon trainer engaged in a battle with a worthy opponent.
+You are tasked with making decisions to win the battle, and talking to your opponent along the way."""
+
+BATTLE_SYSTEM_INSTRUCTIONS = """To make your battle decisions you'll get the following information:
 Your possible choices for the turn. 
 Your pokemon's moves and their projected damages. 
 Your opponent's active pokemon. 
 Your opponent's known reserve pokemon.
 
+Reason concisely and logically about what the best move would be given the information you know.
 To designate your choice, put\n
 CHOICE:
 '<Option>'
@@ -42,7 +47,7 @@ move <MOVE NAME>.
 If you choose to switch pokemon, output:
 switch <POKEMON TO SWITCH>.
 
-As for strategy, please keep in mind that Switching in another pokemon Will burn a turn and allow for the opponent to attack the incoming Pokemon or set up some condition that is favorable to them.
+As for strategy, please keep in mind that switching in another pokemon Will burn a turn and allow for the opponent to attack the incoming Pokemon or set up some condition that is favorable to them.
 Switching should only be done when it is expected that the switch will highly be in your favor, such as when the opponent can't do much damage to the incoming pokemon.
 For moves, even if a move doesn't damage the opponent, it could very well be worth using if it'll give you an advantage in the coming turns. There should be a good balance between setup and offense.
 """
@@ -51,6 +56,14 @@ TERA_SYSTEM_INSTRUCTIONS = """If you choose a move and want to terastallize your
 terastallize <TERA TYPE>
 This is only possible when your current pokemon can terastallize."""
 
+BATTLE_COMMENTARY_INSTRUCTIONS = """You are to generate commentary from the perspective of a Pokémon trainer, reflecting on a heated battle. 
+Your commentary should be dramatic, filled with taunts, and reflect the emotions of a competitive Pokémon battle. It is important to be concise.
+When generating responses, follow this format:
+COMMENTARY:
+<put commentary here>
+END"""
+
+######## BOT CONTEXT ########
 # note: Add the below when you want to give the bot dialogue options
 """In addition to which choice you want to make, you will also provide some dialogue commentating on the battle and why you made the choice you did."""
 
@@ -82,8 +95,10 @@ OUTSPEED_OPP_TEMPLATE = """Do we expect to outspeed the opponent's pokemon? {}""
 def create_combined_prompt_template():
 	# Combine all templates into one big template
 	combined_template = "\n".join([
+		BOT_PERSONA,
 		BATTLE_SYSTEM_INSTRUCTIONS,
 		TERA_SYSTEM_INSTRUCTIONS,
+		BATTLE_COMMENTARY_INSTRUCTIONS,
 		"\nBATTLE CONTEXT:",
 		USER_ACTIVE_PROMPT_TEMPLATE,
 		USER_OPTIONS_PROMPT_TEMPLATE,
@@ -345,37 +360,39 @@ def parse_choice_from_llm_output(llm_output: str) -> list[str]:
 	return None
 
 def parse_commentary_from_llm_output(llm_output: str) -> str:
-    """
-    Parses the LLM output to extract any bot commentary.
-    
-    Args:
-        llm_output (str): The output from the LLM.
+	"""
+	Parses the LLM output to extract any bot commentary.
+	
+	Args:
+		llm_output (str): The output from the LLM.
 
-    Returns:
-        str: The parsed commentary if valid, otherwise an empty string.
-    """
-    # Split the content based on COMMENTARY marker
-    commentary_marker = "COMMENTARY:"
-    end_marker = "END"
+	Returns:
+		str: The parsed commentary if valid, otherwise an empty string.
+	"""
+	# Split the content based on COMMENTARY marker
+	commentary_marker = "COMMENTARY:"
+	end_marker = "END"
 
-    # Find the section that begins with COMMENTARY
-    commentary_start = llm_output.find(commentary_marker)
-    
-    # If COMMENTARY is not found, return an empty string
-    if commentary_start == -1:
-        return ""
+	# Find the section that begins with COMMENTARY
+	commentary_start = llm_output.find(commentary_marker)
+	
+	# If COMMENTARY is not found, return an empty string
+	if commentary_start == -1:
+		return ""
 
-    # Slice from the point after "COMMENTARY:" marker
-    commentary_start += len(commentary_marker)
+	# Slice from the point after "COMMENTARY:" marker
+	commentary_start += len(commentary_marker)
 
-    # Find the end of the commentary section
-    commentary_end = llm_output.find(end_marker, commentary_start)
-    
-    # If END is not found after COMMENTARY, return an empty string
-    if commentary_end == -1:
-        return ""
-    
-    # Extract and clean the commentary (strip leading/trailing spaces and newlines)
-    commentary = llm_output[commentary_start:commentary_end].strip()
+	# Find the end of the commentary section
+	commentary_end = llm_output.find(end_marker, commentary_start)
+	
+	# If END is not found after COMMENTARY, return an empty string
+	if commentary_end == -1:
+		return ""
+	
+	# Extract and clean the commentary (strip leading/trailing spaces and newlines)
+	commentary = llm_output[commentary_start:commentary_end]
+	commentary = commentary.replace("CHOICE:", "") # replace any other tags that we don't want to display
+	commentary = commentary.strip()
 
-    return commentary
+	return commentary
